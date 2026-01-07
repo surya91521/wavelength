@@ -166,18 +166,26 @@ export function attachmentStyle(messages: Message[]): { avgWords: Record<string,
 export function messagesByMonth(messages: Message[]): { month: string; [key: string]: number | string }[] {
   if (messages.length === 0) return [];
 
-  const participantsSet = new Set(messages.map(m => m.sender));
+  // Filter out invalid historical dates (WhatsApp launched 2009) and future dates
+  const now = new Date();
+  const validMessages = messages.filter(m => {
+    const y = m.date.getFullYear();
+    return y >= 2009 && m.date <= now;
+  });
+
+  if (validMessages.length === 0) return [];
+
+  const participantsSet = new Set(validMessages.map(m => m.sender));
   const participants = Array.from(participantsSet);
 
   // Determine range from first message to today
-  const sorted = [...messages].sort((a, b) => a.date.getTime() - b.date.getTime());
+  const sorted = [...validMessages].sort((a, b) => a.date.getTime() - b.date.getTime());
   const start = new Date(sorted[0].date.getFullYear(), sorted[0].date.getMonth(), 1);
-  const today = new Date();
-  const end = new Date(today.getFullYear(), today.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth(), 1);
 
   // Precompute counts per sender per month key 'yyyy-MM'
   const counts: Record<string, Record<string, number>> = {};
-  for (const m of messages) {
+  for (const m of validMessages) {
     const key = `${m.date.getFullYear().toString().padStart(4, '0')}-${(m.date.getMonth()+1).toString().padStart(2, '0')}`;
     if (!counts[key]) counts[key] = {};
     counts[key][m.sender] = (counts[key][m.sender] || 0) + 1;

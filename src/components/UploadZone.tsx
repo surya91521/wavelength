@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { Upload, FileText, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface UploadZoneProps {
   onFileUpload: (file: File) => void;
@@ -8,6 +9,15 @@ interface UploadZoneProps {
 
 export const UploadZone = ({ onFileUpload }: UploadZoneProps) => {
   const [isDragging, setIsDragging] = useState(false);
+
+  const validateAndUpload = useCallback((file: File) => {
+    const name = file.name.toLowerCase();
+    if (name.endsWith('.txt') || name.endsWith('.zip')) {
+      onFileUpload(file);
+    } else {
+      toast.error("Invalid file type. Please upload a .txt or .zip file.");
+    }
+  }, [onFileUpload]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -23,12 +33,12 @@ export const UploadZone = ({ onFileUpload }: UploadZoneProps) => {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
-    if (file) onFileUpload(file);
-  }, [onFileUpload]);
+    if (file) validateAndUpload(file);
+  }, [validateAndUpload]);
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) onFileUpload(file);
+    if (file) validateAndUpload(file);
   };
 
   return (

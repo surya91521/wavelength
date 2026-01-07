@@ -21,7 +21,7 @@ export const HeartbeatGraph = ({ data, participants }: HeartbeatGraphProps) => {
 
   return (
     <div className="glass rounded-2xl p-6 animate-slide-up">
-      <h3 className="font-display text-xl font-semibold mb-2">Your Heartbeat</h3>
+      <h3 className="font-display text-xl font-semibold mb-2">Wavelength Graph</h3>
       <p className="text-sm text-muted-foreground mb-6">Message frequency over time</p>
       
       <div className="h-64">
@@ -40,7 +40,13 @@ export const HeartbeatGraph = ({ data, participants }: HeartbeatGraphProps) => {
               axisLine={false} 
               tickLine={false}
               tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
-              tickFormatter={(v) => v.slice(0, 3)}
+              tickFormatter={(v) => {
+                  // expects "MMM yyyy" format (e.g. "Jan 2024") from analytics
+                  const [m, y] = v.split(' ');
+                  if (!y) return v;
+                  return `${m} '${y.slice(2)}`;
+              }}
+              minTickGap={30}
             />
             <YAxis axisLine={false} tickLine={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
             <Tooltip
