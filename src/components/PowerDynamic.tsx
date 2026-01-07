@@ -1,4 +1,5 @@
 import { TrendingUp, MessageCircle, Clock, Send, Reply, MessagesSquare } from "lucide-react";
+import { useMemo } from "react";
 
 interface PowerDynamicProps {
   participants: string[];
@@ -14,12 +15,13 @@ export const PowerDynamic = ({
   initiatorCounts, 
   doubleTextRatios,
 }: PowerDynamicProps) => {
-  const [you, them] = participants.length >= 2 ? participants : ['You', 'Them'];
-  
   // Calculate effort percentages based on initiator counts
   const totalInitiations = Object.values(initiatorCounts).reduce((a, b) => a + b, 0) || 1;
-  const youInitiatorPercent = Math.round(((initiatorCounts[you] || 0) / totalInitiations) * 100);
-  const themInitiatorPercent = 100 - youInitiatorPercent;
+  const initiatorStats = participants.map(p => ({
+    name: p,
+    count: initiatorCounts[p] || 0,
+    percent: Math.round(((initiatorCounts[p] || 0) / totalInitiations) * 100)
+  })).sort((a, b) => b.count - a.count);
   
   // Format response time
   const formatTime = (minutes: number | null) => {
@@ -29,16 +31,25 @@ export const PowerDynamic = ({
     if (minutes < 1440) return `${Math.round(minutes / 60)}h`;
     return `${Math.round(minutes / 1440)}d`;
   };
-  
-  const yourResponseTime = avgResponseTimes[you];
-  const theirResponseTime = avgResponseTimes[them];
-  
-  // Double text ratio comparison
-  const yourDoubleText = doubleTextRatios[you] || 0;
-  const theirDoubleText = doubleTextRatios[them] || 0;
-  const doubleTextMultiplier = theirDoubleText > 0 
-    ? (yourDoubleText / theirDoubleText).toFixed(1) 
-    : yourDoubleText > 0 ? '∞' : '1';
+
+  const getGradient = (index: number) => {
+    const gradients = [
+        "from-coral to-coral/80",
+        "from-rose to-rose/80",
+        "from-amber to-amber/80", 
+        "from-blue-400 to-blue-600",
+        "from-purple-400 to-purple-600"
+    ];
+    return gradients[index % gradients.length];
+  }
+
+  const sortedByResponseTime = [...participants].sort((a, b) => {
+    const tA = avgResponseTimes[a] || 999999;
+    const tB = avgResponseTimes[b] || 999999;
+    return tA - tB;
+  });
+
+  const fastestResponder = sortedByResponseTime[0];
 
   return (
     <div className="glass rounded-2xl p-6 animate-slide-up-delay-1">
@@ -49,45 +60,63 @@ export const PowerDynamic = ({
 
       <div className="space-y-6">
         {/* Response Time Comparison */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="text-center p-4 bg-muted/50 rounded-xl border border-coral/20">
-            <Clock className="w-5 h-5 text-coral mx-auto mb-2" />
-            <p className="text-2xl font-display font-bold gradient-text">
-              {formatTime(yourResponseTime)}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">Your reply time</p>
-          </div>
-          <div className="text-center p-4 bg-muted/50 rounded-xl border border-rose/20">
-            <Clock className="w-5 h-5 text-rose mx-auto mb-2" />
-            <p className="text-2xl font-display font-bold gradient-warm-text">
-              {formatTime(theirResponseTime)}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">Their reply time</p>
-          </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
+            {participants.map((p, i) => {
+                const isFastest = p === fastestResponder;
+                return (
+                <div 
+                    key={p} 
+                    className={`relative text-center p-3 rounded-xl border transition-all duration-300 flex flex-col items-center justify-center ${
+                        isFastest 
+                        ? "bg-primary/10 border-primary ring-2 ring-primary/20 shadow-lg scale-105 z-10" 
+                        : "bg-muted/50 border-border/50 group hover:border-border"
+                    }`}
+                >
+                    {isFastest && (
+                        <div className="absolute -top-2.5 bg-primary text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                            FASTEST
+                        </div>
+                    )}
+                    <Clock className={`w-4 h-4 mb-2 ${isFastest ? "text-primary animate-pulse" : "text-muted-foreground group-hover:text-foreground transition-colors"}`} />
+                    <p className={`text-lg font-display font-bold ${isFastest ? "text-foreground" : ""}`}>
+                        {formatTime(avgResponseTimes[p] || null)}
+                    </p>
+                    <p 
+                        className={`text-xs mt-1 truncate px-1 max-w-full font-medium ${isFastest ? "text-primary" : "text-muted-foreground"}`} 
+                        title={p}
+                    >
+                        {p}
+                    </p>
+                </div>
+            )})}
         </div>
 
         {/* Initiator Badge */}
-        <div className="p-4 bg-gradient-to-r from-coral/10 to-rose/10 rounded-xl border border-primary/20">
+        <div className="p-4 bg-muted/20 rounded-xl border border-border/20">
           <div className="flex items-center gap-3 mb-2">
             <Send className="w-5 h-5 text-coral" />
-            <span className="font-display font-semibold">The Initiator</span>
+            <span className="font-display font-semibold">Initiations</span>
           </div>
-          <p className="text-sm text-muted-foreground">
-            You started <span className="text-coral font-bold">{youInitiatorPercent}%</span> of conversations after 24+ hours of silence
+          <p className="text-sm text-muted-foreground mb-3">
+            Conversations started after 24h+ silence
           </p>
-          <div className="mt-3 h-3 bg-muted rounded-full overflow-hidden flex">
-            <div 
-              className="bg-gradient-to-r from-coral to-coral/80 transition-all duration-1000"
-              style={{ width: `${youInitiatorPercent}%` }}
-            />
-            <div 
-              className="bg-gradient-to-r from-rose/80 to-rose transition-all duration-1000"
-              style={{ width: `${themInitiatorPercent}%` }}
-            />
+          
+          <div className="h-4 bg-muted rounded-full overflow-hidden flex w-full">
+            {initiatorStats.map((stat, i) => (
+                stat.percent > 0 && (
+                    <div 
+                        key={stat.name}
+                        className={`bg-gradient-to-r ${getGradient(i)} transition-all duration-1000`}
+                        style={{ width: `${stat.percent}%` }}
+                        title={`${stat.name}: ${stat.count} (${stat.percent}%)`}
+                    />
+                )
+            ))}
           </div>
-          <div className="flex justify-between text-xs text-muted-foreground mt-1">
-            <span>You: {initiatorCounts[you] || 0}</span>
-            <span>Them: {initiatorCounts[them] || 0}</span>
+          <div className="flex flex-wrap justify-between text-xs text-muted-foreground mt-2 gap-2">
+             {initiatorStats.map(stat => (
+                 <span key={stat.name}>{stat.name}: {stat.count}</span>
+             ))}
           </div>
         </div>
 
@@ -95,22 +124,33 @@ export const PowerDynamic = ({
         <div className="p-4 bg-muted/30 rounded-xl">
           <div className="flex items-center gap-3 mb-2">
             <MessagesSquare className="w-5 h-5 text-amber" />
-            <span className="font-display font-semibold">The Double-Texter</span>
+            <span className="font-display font-semibold">Double-Texting</span>
           </div>
-          <p className="text-sm text-muted-foreground">
-            You are <span className="text-amber font-bold">{doubleTextMultiplier}x</span> more likely to send multiple messages without a reply
+          <p className="text-xs text-muted-foreground/80 mb-3 leading-relaxed">
+             How often you send 2+ msgs in a row compared to single msgs.
           </p>
+          <div className="space-y-2 mt-2">
+            {participants.map(p => (
+                 <div key={p} className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground truncate max-w-[120px]" title={p}>{p}</span>
+                    <span className="font-bold text-amber">
+                        {(doubleTextRatios[p] || 0).toFixed(1)}%
+                    </span>
+                 </div>
+            ))}
+          </div>
         </div>
-
-        {/* Insight Quote */}
+        
+        {/* Simple Insight */}
         <p className="text-center text-sm text-muted-foreground italic border-t border-border/50 pt-4">
-          {yourResponseTime !== null && theirResponseTime !== null && yourResponseTime < theirResponseTime * 0.5 
-            ? `"You're always there for them. Maybe they should pick up the pace?"`
-            : yourResponseTime !== null && theirResponseTime !== null && theirResponseTime < yourResponseTime * 0.5
-            ? `"They're always on it. They really care about your convos."`
-            : `"Pretty balanced! You both value each other's time."`
-          }
+             {participants.length > 2 
+                ? `${fastestResponder} is currently the fastest responder.`
+                : participants[0] === fastestResponder 
+                    ? `${participants[0]} tends to reply faster.`
+                    : `${participants[1]} tends to reply faster.`
+             }
         </p>
+
       </div>
     </div>
   );

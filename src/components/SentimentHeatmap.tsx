@@ -1,5 +1,7 @@
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from 'date-fns';
 import type { SentimentDay } from '@/lib/types';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface SentimentHeatmapProps {
   sentimentDays: SentimentDay[];
@@ -70,40 +72,47 @@ export const SentimentHeatmap = ({ sentimentDays }: SentimentHeatmapProps) => {
   const bestMonth = monthEntries.sort((a, b) => b[1].happy - a[1].happy)[0];
   const worstMonth = monthEntries.sort((a, b) => b[1].tension - a[1].tension)[0];
 
-  // Only show last 3 months for compact view
-  const displayMonths = months.slice(-3);
-
   return (
-    <div className="glass rounded-2xl p-6 animate-slide-up-delay-2">
+    <div className="glass rounded-2xl p-6 animate-slide-up-delay-2 h-full flex flex-col">
       <h3 className="font-display text-xl font-semibold mb-2">Sentiment Calendar</h3>
       <p className="text-sm text-muted-foreground mb-6">
         The emotional weather of your relationship
       </p>
 
-      {/* Calendar Grid - Last 3 months */}
-      <div className="space-y-4 mb-6">
-        {displayMonths.map(month => {
-          const firstDayOffset = getDay(parseISO(month.days[0].date));
-          return (
-            <div key={month.name}>
-              <p className="text-xs text-muted-foreground mb-2">{month.name}</p>
-              <div className="grid grid-cols-7 gap-1">
-                {/* Empty cells for offset */}
-                {Array.from({ length: firstDayOffset }).map((_, i) => (
-                  <div key={`empty-${i}`} className="w-4 h-4" />
-                ))}
-                {month.days.map(day => (
-                  <div
-                    key={day.date}
-                    className={`w-4 h-4 rounded-sm ${getSentimentColor(day.tag)} transition-all hover:scale-125`}
-                    title={`${day.date}: ${day.tag}`}
-                  />
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {/* Calendar Grid - All months with scroll */}
+      <ScrollArea className="flex-1 mb-6 max-h-[300px] pr-4">
+        <div className="space-y-4">
+          <TooltipProvider>
+            {months.map(month => {
+              const firstDayOffset = getDay(parseISO(month.days[0].date));
+              return (
+                <div key={month.name}>
+                  <p className="text-xs text-muted-foreground mb-2 sticky top-0 bg-background/80 backdrop-blur-sm z-10 py-1">{month.name}</p>
+                  <div className="grid grid-cols-7 gap-1">
+                    {/* Empty cells for offset */}
+                    {Array.from({ length: firstDayOffset }).map((_, i) => (
+                      <div key={`empty-${i}`} className="w-4 h-4" />
+                    ))}
+                    {month.days.map(day => (
+                      <Tooltip key={day.date}>
+                        <TooltipTrigger>
+                          <div
+                            className={`w-4 h-4 rounded-sm ${getSentimentColor(day.tag)} transition-all hover:scale-125 hover:ring-2 hover:ring-offset-1 hover:ring-offset-background hover:ring-primary/20`}
+                          />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs font-semibold">{format(parseISO(day.date), 'MMMM do, yyyy')}</p>
+                          <p className="text-xs capitalize text-muted-foreground">{day.tag}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </TooltipProvider>
+        </div>
+      </ScrollArea>
 
       {/* Legend */}
       <div className="flex items-center justify-center gap-4 mb-6 text-xs">

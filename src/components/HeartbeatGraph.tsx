@@ -6,7 +6,18 @@ interface HeartbeatGraphProps {
 }
 
 export const HeartbeatGraph = ({ data, participants }: HeartbeatGraphProps) => {
-  const [you, them] = participants.length >= 2 ? participants : ['You', 'Them'];
+
+  const getGradientColor = (index: number) => {
+      const colors = [
+          "hsl(12, 76%, 61%)",  // Coral
+          "hsl(340, 65%, 65%)", // Rose
+          "hsl(38, 92%, 50%)",  // Amber/Orange
+          "hsl(217, 91%, 60%)", // Blue
+          "hsl(262, 83%, 58%)", // Purple
+          "hsl(150, 60%, 40%)"  // Green
+      ];
+      return colors[index % colors.length];
+  }
 
   return (
     <div className="glass rounded-2xl p-6 animate-slide-up">
@@ -17,14 +28,12 @@ export const HeartbeatGraph = ({ data, participants }: HeartbeatGraphProps) => {
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data}>
             <defs>
-              <linearGradient id="youGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(12, 76%, 61%)" stopOpacity={0.4} />
-                <stop offset="95%" stopColor="hsl(12, 76%, 61%)" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="themGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(340, 65%, 65%)" stopOpacity={0.4} />
-                <stop offset="95%" stopColor="hsl(340, 65%, 65%)" stopOpacity={0} />
-              </linearGradient>
+              {participants.map((p, i) => (
+                  <linearGradient key={`gradient-${p}`} id={`gradient-${p}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={getGradientColor(i)} stopOpacity={0.4} />
+                    <stop offset="95%" stopColor={getGradientColor(i)} stopOpacity={0} />
+                  </linearGradient>
+              ))}
             </defs>
             <XAxis 
               dataKey="month" 
@@ -41,21 +50,28 @@ export const HeartbeatGraph = ({ data, participants }: HeartbeatGraphProps) => {
                 borderRadius: '12px',
               }}
             />
-            <Area type="monotone" dataKey={you} stroke="hsl(12, 76%, 61%)" strokeWidth={2} fill="url(#youGradient)" name={you} />
-            <Area type="monotone" dataKey={them} stroke="hsl(340, 65%, 65%)" strokeWidth={2} fill="url(#themGradient)" name={them} />
+             {participants.map((p, i) => (
+                <Area 
+                    key={p}
+                    type="monotone" 
+                    dataKey={p} 
+                    stroke={getGradientColor(i)} 
+                    strokeWidth={2} 
+                    fill={`url(#gradient-${p})`} 
+                    name={p} 
+                />
+            ))}
           </AreaChart>
         </ResponsiveContainer>
       </div>
 
-      <div className="flex items-center justify-center gap-6 mt-4">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-coral" />
-          <span className="text-sm text-muted-foreground">{you}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-rose" />
-          <span className="text-sm text-muted-foreground">{them}</span>
-        </div>
+      <div className="flex flex-wrap items-center justify-center gap-6 mt-4">
+        {participants.map((p, i) => (
+             <div key={p} className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getGradientColor(i) }} />
+                <span className="text-sm text-muted-foreground">{p}</span>
+            </div>
+        ))}
       </div>
     </div>
   );

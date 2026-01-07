@@ -25,9 +25,34 @@ export interface AnalysisData {
   
   // Heartbeat / Message frequency
   messagesByMonth: { month: string; [key: string]: number | string }[];
+  messagesByYear: { year: string; [key: string]: number | string }[];
   
   // Ghost Hours
   heatmapData: { day: string; hours: { hour: number; value: number }[] }[];
+  
+  // Extra
+  topWords: { word: string; count: number }[];
+  slangWords: { word: string; firstUsedBy: string; firstDate: Date; adopted: boolean }[];
+  
+  // Nostalgia Trip
+  theFirsts: FirstMessage[];
+  onThisDay: OnThisDayMessage[];
+  
+  // Petty Metrics
+  deleterStats: Record<string, { deleted: number; total: number; ratio: number }>;
+  curiosityStats: {
+    questions: Record<string, number>;
+    dryTexts: Record<string, number>;
+    questionRatio: Record<string, number>;
+    dryTextRatio: Record<string, number>;
+  };
+  podcastStats: Record<string, { count: number; estimatedHours: number }>;
+  emojiStats: {
+    emojiUsage: Record<string, Record<string, number>>;
+    uniqueEmojis: Record<string, string[]>;
+    redFlags: Record<string, number>;
+  };
+  profanityStats: Record<string, { total: number; topWords: { word: string; count: number }[] }>;
 }
 
 export interface SentimentDay {
@@ -35,4 +60,19 @@ export interface SentimentDay {
   happy: number;
   tension: number;
   tag: 'happy' | 'tension' | 'neutral';
+}
+
+// Nostalgia Trip Types
+export interface FirstMessage {
+  type: 'first' | 'firstSorry' | 'firstLove' | 'firstNickname';
+  message: Message;
+  label: string;
+  yearsAgo?: number;
+  description?: string;
+}
+
+export interface OnThisDayMessage {
+  message: Message;
+  yearsAgo: number;
+  date: Date;
 }

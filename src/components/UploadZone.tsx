@@ -64,10 +64,10 @@ export const UploadZone = ({ onFileUpload }: UploadZoneProps) => {
           
           <div className="text-center">
             <p className="text-lg font-medium text-foreground">
-              Drop your chat export here
+              Drop your WhatsApp chat export here
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              WhatsApp (.txt) or iMessage export
+              Supports .txt or .zip files
             </p>
           </div>
         </div>
@@ -78,8 +78,8 @@ export const UploadZone = ({ onFileUpload }: UploadZoneProps) => {
             .txt or .zip files
           </span>
           <span className="flex items-center gap-1.5">
-            <Shield className="w-3.5 h-3.5 text-green-500" />
-            Processed locally
+            <Shield className="w-4 h-4 text-green-500" />
+            <span className="font-semibold text-green-600 dark:text-green-500">100% Private (Local Processing)</span>
           </span>
         </div>
       </label>

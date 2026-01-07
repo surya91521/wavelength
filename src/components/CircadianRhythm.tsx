@@ -11,19 +11,26 @@ export const CircadianRhythm = ({ circadianData }: CircadianRhythmProps) => {
   const threshold = maxCount * 0.6;
   const peakHours = circadianData.filter(d => d.count >= threshold).map(d => d.hour);
   
-  // Determine if night owls or early birds
-  const nightHours = circadianData.filter(d => d.hour >= 22 || d.hour <= 4).reduce((sum, d) => sum + d.count, 0);
-  const morningHours = circadianData.filter(d => d.hour >= 6 && d.hour <= 10).reduce((sum, d) => sum + d.count, 0);
-  const afternoonHours = circadianData.filter(d => d.hour >= 11 && d.hour <= 17).reduce((sum, d) => sum + d.count, 0);
-  
-  const totalEmotional = nightHours + morningHours + afternoonHours;
-  const nightPercent = totalEmotional > 0 ? Math.round((nightHours / totalEmotional) * 100) : 0;
+  // Determine best time range
+  const total = circadianData.reduce((sum, d) => sum + d.count, 0);
 
-  const chronotype = nightHours > morningHours && nightHours > afternoonHours 
-    ? 'Night Owls 🦉' 
-    : morningHours > afternoonHours 
-    ? 'Early Birds 🐦'
-    : 'Daytime Duo ☀️';
+  const ranges = [
+    { label: 'Night Owls 🦉', start: 22, end: 4, text: '10 PM and 5 AM' },
+    { label: 'Early Birds 🐦', start: 5, end: 11, text: '5 AM and 12 PM' },
+    { label: 'Daytime Duo ☀️', start: 12, end: 17, text: '12 PM and 6 PM' },
+    { label: 'Evening Chillers 🌅', start: 18, end: 21, text: '6 PM and 10 PM' },
+  ];
+
+  const getRangeCount = (start: number, end: number) => 
+    circadianData.filter(d => 
+      start <= end ? (d.hour >= start && d.hour <= end) : (d.hour >= start || d.hour <= end)
+    ).reduce((sum, d) => sum + d.count, 0);
+
+  const stats = ranges.map(r => ({ ...r, count: getRangeCount(r.start, r.end) }));
+  const best = stats.reduce((p, c) => c.count > p.count ? c : p);
+  
+  const chronotype = best.label;
+  const percent = total > 0 ? Math.round((best.count / total) * 100) : 0;
 
   const formatHour = (h: number) => {
     if (h === 0) return '12 AM';
@@ -87,7 +94,7 @@ export const CircadianRhythm = ({ circadianData }: CircadianRhythmProps) => {
         
         {/* Center icon */}
         <div className="absolute inset-0 flex items-center justify-center">
-          {nightHours > morningHours ? (
+          {chronotype.includes('Night') || chronotype.includes('Evening') ? (
             <Moon className="w-8 h-8 text-amber" />
           ) : (
             <Sun className="w-8 h-8 text-amber" />
@@ -102,7 +109,7 @@ export const CircadianRhythm = ({ circadianData }: CircadianRhythmProps) => {
         </div>
         
         <p className="text-sm text-muted-foreground">
-          <span className="text-coral font-medium">{nightPercent}%</span> of your emotional messages happen between 11 PM and 2 AM
+          <span className="text-coral font-medium">{percent}%</span> of your emotional messages happen between {best.text}
         </p>
         
         {peakHours.length > 0 && (

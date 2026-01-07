@@ -9,8 +9,21 @@ import { SentimentHeatmap } from "@/components/SentimentHeatmap";
 import { LaughterScore } from "@/components/LaughterScore";
 import { CircadianRhythm } from "@/components/CircadianRhythm";
 import { AttachmentStyle } from "@/components/AttachmentStyle";
-import { VocabularyMerger } from "@/components/VocabularyMerger";
 import { DeepDiveCTA } from "@/components/DeepDiveCTA";
+import { WrappedShareables } from "@/components/WrappedShareables";
+import { DeleterRatio } from "@/components/DeleterRatio";
+import { CuriosityGap } from "@/components/CuriosityGap";
+import { PodcastMode } from "@/components/PodcastMode";
+import { EmojiDNA } from "@/components/EmojiDNA";
+import { SearchParty } from "@/components/SearchParty";
+import { ProfanityFilter } from "@/components/ProfanityFilter";
+import { ReportDownload } from "@/components/ReportDownload";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { toast } from "sonner";
 import { parseWhatsAppText, parseWhatsAppZip } from "@/lib/whatsappParser";
 import * as analytics from "@/lib/analytics";
@@ -21,6 +34,7 @@ type Stage = "upload" | "analyzing" | "results";
 const Index = () => {
   const [stage, setStage] = useState<Stage>("upload");
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
 
   const analyzeMessages = (messages: Message[]): AnalysisData => {
     const parts = analytics.participants(messages);
@@ -43,7 +57,17 @@ const Index = () => {
       circadianData: analytics.circadianEmotional(messages),
       attachmentStyle: analytics.attachmentStyle(messages),
       messagesByMonth: analytics.messagesByMonth(messages),
+      messagesByYear: analytics.messagesByYear(messages),
       heatmapData: analytics.heatmapByDayHour(messages),
+      topWords: analytics.getTopWords(messages),
+      slangWords: slangWords,
+      theFirsts: [],
+      onThisDay: [],
+      deleterStats: analytics.deleterRatio(messages),
+      curiosityStats: analytics.curiosityGap(messages),
+      podcastStats: analytics.podcastMode(messages),
+      emojiStats: analytics.emojiDNA(messages),
+      profanityStats: analytics.profanityCount(messages),
     };
   };
 
@@ -66,6 +90,7 @@ const Index = () => {
         return;
       }
 
+      setMessages(messages);
       const data = analyzeMessages(messages);
       setAnalysisData(data);
       toast.success(`Analyzed ${messages.length.toLocaleString()} messages!`);
@@ -79,8 +104,6 @@ const Index = () => {
   const handleAnalysisComplete = () => {
     setStage("results");
   };
-
-  const slangWords = analysisData ? analytics.findTopSlangWords([]) : [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -104,7 +127,7 @@ const Index = () => {
             </div>
             {stage === "results" && (
               <button 
-                onClick={() => { setStage("upload"); setAnalysisData(null); }}
+                onClick={() => { setStage("upload"); setAnalysisData(null); setMessages([]); }}
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 Analyze another chat
@@ -120,16 +143,42 @@ const Index = () => {
               <div className="py-20">
                 <div className="text-center mb-12 animate-slide-up">
                   <h1 className="font-display text-4xl md:text-6xl font-bold mb-4">
-                    See the <span className="gradient-text">heartbeat</span> of
+                    See the <span className="gradient-text">wavelength</span> of
                     <br />your relationship
                   </h1>
                   <p className="text-lg text-muted-foreground max-w-xl mx-auto">
                     Upload your WhatsApp chat export and discover hidden patterns in how 
                     you communicate with the people you love.
                   </p>
+                  <p className="text-sm text-green-500/80 font-medium mt-4 flex items-center justify-center gap-2">
+                     <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                     Your chats are NOT uploaded anywhere. 100% processing in-browser.
+                  </p>
                 </div>
 
                 <UploadZone onFileUpload={handleFileUpload} />
+
+                <div className="max-w-xl mx-auto mt-8">
+                  <Accordion type="single" collapsible>
+                    <AccordionItem value="item-1" className="border-border/50">
+                      <AccordionTrigger className="text-sm text-muted-foreground hover:text-foreground">
+                        How to export chat history?
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-4 text-sm text-muted-foreground text-left pt-2">
+                          <div>
+                            <p className="font-semibold text-foreground mb-1">Android</p>
+                            <p>Open chat &gt; Tap More options (three dots) &gt; More &gt; Export chat &gt; Without Media</p>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-foreground mb-1">iPhone</p>
+                            <p>Open chat &gt; Tap contact name at top &gt; Scroll down &gt; Export Chat &gt; Without Media</p>
+                          </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                </div>
 
                 <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
                   {[
@@ -155,7 +204,7 @@ const Index = () => {
             )}
 
             {stage === "results" && analysisData && (
-              <div className="py-12 space-y-8">
+              <div className="py-12 space-y-12">
                 <div className="text-center mb-12 animate-slide-up">
                   <p className="text-sm text-muted-foreground mb-2">
                     Analyzed {analysisData.totalMessages.toLocaleString()} messages
@@ -165,9 +214,8 @@ const Index = () => {
                   </h2>
                 </div>
 
-                {/* Module 1: Power Dynamics */}
-                <div className="space-y-2">
-                  <h3 className="text-lg font-display font-semibold text-muted-foreground">Module 1: Power Dynamics</h3>
+                {/* Power Dynamics */}
+                <div className="space-y-6">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <HeartbeatGraph data={analysisData.messagesByMonth} participants={analysisData.participants} />
                     <PowerDynamic 
@@ -180,29 +228,51 @@ const Index = () => {
                   </div>
                 </div>
 
-                {/* Module 2: Emotional Timeline */}
-                <div className="space-y-2">
-                  <h3 className="text-lg font-display font-semibold text-muted-foreground">Module 2: Emotional Timeline</h3>
+                {/* Petty Metrics: Deleter Ratio */}
+                <div className="space-y-6">
+                  <DeleterRatio stats={analysisData.deleterStats} participants={analysisData.participants} />
+                </div>
+
+                {/* Emotional Timeline */}
+                <div className="space-y-6">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <SentimentHeatmap sentimentDays={analysisData.sentimentDays} />
                     <LaughterScore laughterCounts={analysisData.laughterCounts} participants={analysisData.participants} />
                   </div>
-                  <VocabularyMerger 
-                    slangWords={analytics.findTopSlangWords([])} 
-                    wordUsage={analysisData.wordUsage}
-                    participants={analysisData.participants}
-                  />
                 </div>
 
-                {/* Module 3: Deep Patterns */}
-                <div className="space-y-2">
-                  <h3 className="text-lg font-display font-semibold text-muted-foreground">Module 3: Deep Patterns</h3>
+                {/* Petty Metrics: Curiosity Gap */}
+                <div className="space-y-6">
+                  <CuriosityGap stats={analysisData.curiosityStats} participants={analysisData.participants} />
+                </div>
+
+                {/* Deep Patterns */}
+                <div className="space-y-6">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <GhostHours data={analysisData.heatmapData} />
                     <CircadianRhythm circadianData={analysisData.circadianData} />
                   </div>
                   <AttachmentStyle attachmentStyle={analysisData.attachmentStyle} participants={analysisData.participants} />
                 </div>
+
+                {/* Petty Metrics: Podcast Mode */}
+                <div className="space-y-6">
+                  <PodcastMode stats={analysisData.podcastStats} participants={analysisData.participants} />
+                </div>
+
+                {/* Petty Metrics: Emoji DNA & Search Party */}
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <EmojiDNA stats={analysisData.emojiStats} participants={analysisData.participants} />
+                    <SearchParty messages={messages} participants={analysisData.participants} />
+                  </div>
+                  <ProfanityFilter messages={messages} participants={analysisData.participants} />
+                </div>
+
+                {/* Wrapped Shareables */}
+                <WrappedShareables data={analysisData} />
+
+                <ReportDownload />
 
                 <DeepDiveCTA />
               </div>
@@ -213,11 +283,8 @@ const Index = () => {
         {/* Footer */}
         <footer className="py-8 px-6 border-t border-border/50">
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-            <p>© 2024 Wavelength. All chats are processed locally.</p>
-            <div className="flex items-center gap-6">
-              <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
-              <a href="#" className="hover:text-foreground transition-colors">Terms</a>
-            </div>
+            <p>© 2026 Wavelength. All chats are processed locally.</p>
+
           </div>
         </footer>
       </div>
