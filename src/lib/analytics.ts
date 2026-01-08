@@ -706,7 +706,7 @@ export function searchWord(messages: Message[], word: string): Record<string, nu
 
 // Profanity Filter
 export function profanityCount(messages: Message[]): Record<string, { total: number; topWords: { word: string; count: number }[] }> {
-  const profanityPattern = /\b(fuck|shit|damn|bitch|ass|hell|piss|crap|dick|pussy|bastard|motherfucker|fucking|shitty|damned|wtf|stfu|mf|omg)\b/gi;
+  const profanityPattern = /\b(fuck|shit|damn|bitch|ass|hell|piss|crap|dick|pussy|bastard|motherfucker|fucking|fucked|fucker|shitty|damned|wtf|stfu|mf|omfg|gtfo|bloody|bollocks|bugger|sod|tosser|wanker|twat|prick|cunt|arse|arsehole|asshole|cock|bellend|knob|slag|slut|whore|jackass|dumbass|bullshit|douche|bc|mc|bhenchod|madarchod|behenchod|maderchod|chutiya|chutiye|harami|saala|saale|kutta|kutti|kamina|kamine|gand|gaand|gandu|bhosdike|bsdk|randi|loda|lauda|lawda|lawde|bkl|mkl|tmkc|mkc)\b/gi;
   const totals: Record<string, number> = {};
   const usage: Record<string, Record<string, number>> = {};
 

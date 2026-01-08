@@ -9,7 +9,6 @@ import { SentimentHeatmap } from "@/components/SentimentHeatmap";
 import { LaughterScore } from "@/components/LaughterScore";
 import { CircadianRhythm } from "@/components/CircadianRhythm";
 import { AttachmentStyle } from "@/components/AttachmentStyle";
-import { DeepDiveCTA } from "@/components/DeepDiveCTA";
 import { WrappedShareables } from "@/components/WrappedShareables";
 import { DeleterRatio } from "@/components/DeleterRatio";
 import { CuriosityGap } from "@/components/CuriosityGap";
@@ -17,7 +16,6 @@ import { PodcastMode } from "@/components/PodcastMode";
 import { EmojiDNA } from "@/components/EmojiDNA";
 import { SearchParty } from "@/components/SearchParty";
 import { ProfanityFilter } from "@/components/ProfanityFilter";
-import { ReportDownload } from "@/components/ReportDownload";
 import {
   Accordion,
   AccordionContent,
@@ -90,6 +88,9 @@ const Index = () => {
         return;
       }
 
+      // Filter out messages from "You" if present, as requested to avoid confusion
+      messages = messages.filter(m => m.sender !== "You");
+
       setMessages(messages);
       const data = analyzeMessages(messages);
       setAnalysisData(data);
@@ -150,29 +151,34 @@ const Index = () => {
                     Upload your WhatsApp chat export and discover hidden patterns in how 
                     you communicate with the people you love.
                   </p>
-                  <p className="text-sm text-green-500/80 font-medium mt-4 flex items-center justify-center gap-2">
-                     <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                     Your chats are NOT uploaded anywhere. 100% processing in-browser.
-                  </p>
+                  <div className="flex justify-center mt-6">
+                    <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 font-medium text-sm animate-fade-in shadow-sm">
+                       <span className="relative flex h-2.5 w-2.5 mr-1">
+                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                         <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                       </span>
+                       Super Safe: Your chats are processed 100% locally on your device.
+                    </div>
+                  </div>
                 </div>
 
                 <UploadZone onFileUpload={handleFileUpload} />
 
-                <div className="max-w-xl mx-auto mt-8">
+                <div className="max-w-xl mx-auto mt-12 bg-secondary/30 border border-primary/20 rounded-xl shadow-sm overflow-hidden animate-fade-in">
                   <Accordion type="single" collapsible>
-                    <AccordionItem value="item-1" className="border-border/50">
-                      <AccordionTrigger className="text-sm text-muted-foreground hover:text-foreground">
-                        How to export chat history?
+                    <AccordionItem value="item-1" className="border-none px-6">
+                      <AccordionTrigger className="text-base font-medium py-4 hover:no-underline hover:text-primary transition-colors">
+                        How do I export my chat history?
                       </AccordionTrigger>
                       <AccordionContent>
-                        <div className="space-y-4 text-sm text-muted-foreground text-left pt-2">
+                        <div className="space-y-4 text-sm text-muted-foreground text-left pb-4">
                           <div>
                             <p className="font-semibold text-foreground mb-1">Android</p>
-                            <p>Open chat &gt; Tap More options (three dots) &gt; More &gt; Export chat &gt; Without Media</p>
+                            <p>Open chat &gt; Tap More options (three dots) &gt; More &gt; Export chat &gt; <span className="font-exuberant text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">Without Media</span></p>
                           </div>
                           <div>
                             <p className="font-semibold text-foreground mb-1">iPhone</p>
-                            <p>Open chat &gt; Tap contact name at top &gt; Scroll down &gt; Export Chat &gt; Without Media</p>
+                            <p>Open chat &gt; Tap contact name at top &gt; Scroll down &gt; Export Chat &gt; <span className="font-exuberant text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">Without Media</span></p>
                           </div>
                         </div>
                       </AccordionContent>
@@ -271,10 +277,6 @@ const Index = () => {
 
                 {/* Wrapped Shareables */}
                 <WrappedShareables data={analysisData} />
-
-                <ReportDownload />
-
-                <DeepDiveCTA />
               </div>
             )}
           </div>
@@ -283,8 +285,7 @@ const Index = () => {
         {/* Footer */}
         <footer className="py-8 px-6 border-t border-border/50">
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-            <p>© 2026 Wavelength. All chats are processed locally.</p>
-
+            
           </div>
         </footer>
       </div>
