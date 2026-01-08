@@ -1,5 +1,6 @@
 {
   "name": "vite_react_shadcn_ts",
+  "private": true,
   "homepage": "https://surya91521.github.io/wavelength/",
   "license": "UNLICENSED",
   "version": "0.0.0",
