@@ -131,17 +131,9 @@ export function parseWhatsAppText(text: string): Message[] {
 
   // Identify system/group senders
   // Strategy: 
-  // 1. Identify senders who sent the "End-to-end encryption" message.
-  // 2. Verify if they *only* send system-like messages (added/left/changed group).
-  //    If they send even one "normal" message, they are a real user (1-on-1 chat).
-  const encryptionSenders = new Set<string>();
-  messages.forEach(m => {
-     if (m.text.match(/^Messages (to this chat|and calls) are end-to-end encrypted/)) {
-        encryptionSenders.add(m.sender);
-     }
-  });
-
-  const verifiedSystemSenders = new Set<string>();
+  // 1. Identify senders who send system-like messages (encryption, group events, etc.)
+  // 2. If a sender sends mostly (>=80%) or exclusively system messages, mark as system sender
+  // 3. Group names typically only send system notifications
   
   // Regex to identify system event messages
   const systemMsgRegex = [
@@ -161,16 +153,31 @@ export function parseWhatsAppText(text: string): Message[] {
       /You're now an admin/,
       /started a call/,
       /video call ended/,
-      /missed voice call/
+      /missed voice call/,
+      /^This chat is with/,
+      /^Tap for more info/
   ];
 
-  encryptionSenders.forEach(sender => {
-      const allMsgs = messages.filter(m => m.sender === sender);
-      // Check if EVERY message from this sender matches a system regex
-      const isBot = allMsgs.every(m => systemMsgRegex.some(r => m.text.match(r)));
-      if (isBot) {
-          verifiedSystemSenders.add(sender);
-      }
+  // Count system vs non-system messages per sender
+  const senderStats = new Map<string, { total: number; system: number }>();
+  
+  messages.forEach(m => {
+    const stats = senderStats.get(m.sender) || { total: 0, system: 0 };
+    stats.total++;
+    if (systemMsgRegex.some(r => m.text.match(r))) {
+      stats.system++;
+    }
+    senderStats.set(m.sender, stats);
+  });
+
+  // Identify system senders: those who send 80% or more system messages
+  // and have sent at least 1 system message
+  const verifiedSystemSenders = new Set<string>();
+  senderStats.forEach((stats, sender) => {
+    const systemRatio = stats.system / stats.total;
+    if (stats.system > 0 && systemRatio >= 0.8) {
+      verifiedSystemSenders.add(sender);
+    }
   });
 
   // Filter out system messages and messages from confirmed system senders
