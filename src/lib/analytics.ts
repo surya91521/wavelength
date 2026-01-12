@@ -669,7 +669,7 @@ export function emojiDNA(messages: Message[]): {
     uniqueEmojis[sender] = [];
     for (const emoji of allEmojis) {
       const senderCount = emojiUsage[sender][emoji] || 0;
-      if (senderCount > 10) {
+      if (senderCount > 0) {
         // Check if others use it
         let othersUseIt = false;
         for (const otherSender of Object.keys(emojiUsage)) {
@@ -683,6 +683,8 @@ export function emojiDNA(messages: Message[]): {
         }
       }
     }
+    // Sort by usage count descending so the "signature" emoji is the most used unique one
+    uniqueEmojis[sender].sort((a, b) => (emojiUsage[sender][b] || 0) - (emojiUsage[sender][a] || 0));
   }
   
   return { emojiUsage, uniqueEmojis, redFlags };

@@ -14,18 +14,7 @@ export const EmojiDNA = ({ stats, participants }: EmojiDNAProps) => {
   const getTopUniqueEmoji = (sender: string) => {
     const unique = stats.uniqueEmojis[sender] || [];
     if (unique.length === 0) return null;
-    
-    // Get the one with highest usage
-    let maxCount = 0;
-    let topEmoji = '';
-    for (const emoji of unique) {
-      const count = stats.emojiUsage[sender]?.[emoji] || 0;
-      if (count > maxCount) {
-        maxCount = count;
-        topEmoji = emoji;
-      }
-    }
-    return topEmoji || unique[0];
+    return unique[0];
   };
 
   return (
