@@ -537,7 +537,7 @@ function getYearsAgo(date: Date): number {
 
 // 1. Deleter Ratio
 export function deleterRatio(messages: Message[]): Record<string, { deleted: number; total: number; ratio: number }> {
-  const deletedPattern = /this message was deleted|message deleted|omitted|deleted this message/i;
+  const deletedPattern = /this message was deleted|message deleted|deleted this message/i;
   const stats: Record<string, { deleted: number; total: number }> = {};
   
   for (const msg of messages) {
