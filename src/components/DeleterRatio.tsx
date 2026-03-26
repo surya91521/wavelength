@@ -36,12 +36,20 @@ export const DeleterRatio = ({ stats, participants }: DeleterRatioProps) => {
           <div className="space-y-4">
             <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
               <p className="text-sm font-medium mb-2">
-                You are the <span className="font-bold text-primary">"Revisionist"</span>
-              </p>
-              <p className="text-sm text-muted-foreground">
-                <span className="text-xs opacity-80 mt-1 block">
-                  Total: {highest.deleted} deleted out of {highest.total} messages ({highest.ratio.toFixed(1)}%)
+                <span className="font-bold text-primary">{highest.sender}</span> is the{' '}
+                <span className="font-bold text-primary">
+                  {highest.ratio > 5 ? '"Serial Deleter"' : highest.ratio > 2 ? '"Revisionist"' : '"Occasional Backspacer"'}
                 </span>
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {highest.deleted} deleted out of {highest.total} messages ({highest.ratio.toFixed(1)}%)
+              </p>
+              <p className="text-xs text-muted-foreground mt-2 italic">
+                {highest.ratio > 5
+                  ? "What are they hiding? The FBI should check this chat."
+                  : highest.ratio > 2
+                  ? "Typing, rethinking, deleting. The overthinker's workflow."
+                  : "A few regrets here and there. Very human of them."}
               </p>
             </div>
             <div className="space-y-2">

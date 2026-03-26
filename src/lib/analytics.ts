@@ -735,3 +735,525 @@ export function profanityCount(messages: Message[]): Record<string, { total: num
   }
   return result;
 }
+
+// ==========================================
+// Wavelength Score (0-100)
+// ==========================================
+export interface WavelengthScoreResult {
+  score: number;
+  tier: string;
+  description: string;
+}
+
+export function calculateWavelengthScore(
+  totalMessages: number,
+  sentimentDays: { tag: string }[],
+  laughterCounts: Record<string, number>,
+  initiatorCounts: Record<string, number>,
+  streakData: StreakData,
+  avgResponseTimes: Record<string, number | null>,
+  doubleTextRatios: Record<string, number>,
+  participantCount: number,
+): WavelengthScoreResult {
+  let score = 0;
+
+  const totalDays = Math.max(sentimentDays.length, 1);
+  const avgMsgsPerDay = totalMessages / totalDays;
+  const happyDays = sentimentDays.filter(d => d.tag === 'happy').length;
+  const happyRatio = happyDays / totalDays;
+  const totalLaughs = Object.values(laughterCounts).reduce((a, b) => a + b, 0);
+  const laughRatio = totalLaughs / Math.max(totalMessages, 1);
+
+  // 1. Activity (0-20)
+  if (avgMsgsPerDay > 80) score += 20;
+  else if (avgMsgsPerDay > 40) score += 16;
+  else if (avgMsgsPerDay > 20) score += 12;
+  else if (avgMsgsPerDay > 10) score += 8;
+  else if (avgMsgsPerDay > 3) score += 4;
+
+  // 2. Positivity / Sentiment (0-20)
+  score += Math.round(happyRatio * 20);
+
+  // 3. Laughter (0-15)
+  if (laughRatio > 0.12) score += 15;
+  else if (laughRatio > 0.08) score += 12;
+  else if (laughRatio > 0.04) score += 8;
+  else if (laughRatio > 0.02) score += 4;
+
+  // 4. Balance / Initiation symmetry (0-15)
+  const initValues = Object.values(initiatorCounts);
+  if (initValues.length >= 2) {
+    const maxInit = Math.max(...initValues, 1);
+    const minInit = Math.min(...initValues, 1);
+    const ratio = maxInit / minInit;
+    if (ratio < 1.3) score += 15;
+    else if (ratio < 1.8) score += 10;
+    else if (ratio < 2.5) score += 5;
+  } else {
+    score += 8; // Single person, neutral
+  }
+
+  // 5. Streak (0-15)
+  const streakDays = streakData.longestStreak.days;
+  if (streakDays > 180) score += 15;
+  else if (streakDays > 90) score += 12;
+  else if (streakDays > 30) score += 8;
+  else if (streakDays > 7) score += 4;
+
+  // 6. Response time symmetry (0-10)
+  const times = Object.values(avgResponseTimes).filter(t => t !== null) as number[];
+  if (times.length >= 2) {
+    const maxT = Math.max(...times);
+    const minT = Math.min(...times);
+    const timeRatio = maxT / Math.max(minT, 0.1);
+    if (timeRatio < 1.5) score += 10;
+    else if (timeRatio < 2.5) score += 6;
+    else if (timeRatio < 4) score += 3;
+  } else {
+    score += 5;
+  }
+
+  // 7. Double text penalty (-5 if very imbalanced)
+  const dtValues = Object.values(doubleTextRatios);
+  if (dtValues.length >= 2) {
+    const maxDt = Math.max(...dtValues);
+    const minDt = Math.min(...dtValues, 0);
+    if (maxDt > 15 && maxDt - minDt > 10) score -= 5;
+  }
+
+  // 8. Bonus for longevity
+  if (totalDays > 365) score += 5;
+  else if (totalDays > 180) score += 3;
+
+  // Clamp 0-100
+  score = Math.min(Math.max(Math.round(score), 0), 100);
+
+  // Tier
+  let tier: string, description: string;
+  if (score >= 90) {
+    tier = "Soulmates";
+    description = "This is the kind of chat people write songs about. Perfectly in sync.";
+  } else if (score >= 75) {
+    tier = "On the Same Wavelength";
+    description = "You get each other. The balance, the laughs, the effort — it's all there.";
+  } else if (score >= 60) {
+    tier = "Vibing";
+    description = "Solid connection with room to grow. You're doing better than most.";
+  } else if (score >= 40) {
+    tier = "It's Complicated";
+    description = "Some things click, some things don't. It's a work in progress.";
+  } else if (score >= 20) {
+    tier = "On Different Frequencies";
+    description = "The effort gap is showing. Someone's carrying this chat.";
+  } else {
+    tier = "Stranger Danger";
+    description = "Are you sure you two actually know each other?";
+  }
+
+  return { score, tier, description };
+}
+
+// ==========================================
+// Red Flag / Green Flag
+// ==========================================
+export interface Flag {
+  emoji: string;
+  label: string;
+  detail: string;
+}
+
+export function computeFlags(
+  initiatorCounts: Record<string, number>,
+  avgResponseTimes: Record<string, number | null>,
+  laughterCounts: Record<string, number>,
+  streakData: StreakData,
+  deleterStats: Record<string, { deleted: number; total: number; ratio: number }>,
+  curiosityStats: { dryTextRatio: Record<string, number> },
+  convoKillerData: ConvoKillerData,
+  doubleTextRatios: Record<string, number>,
+  totalMessages: number,
+  sentimentDays: { tag: string }[],
+  participants: string[],
+): { green: Flag[]; red: Flag[] } {
+  const green: Flag[] = [];
+  const red: Flag[] = [];
+
+  // --- Initiation balance ---
+  const initValues = Object.values(initiatorCounts);
+  if (initValues.length >= 2) {
+    const maxInit = Math.max(...initValues);
+    const minInit = Math.min(...initValues);
+    const ratio = maxInit / Math.max(minInit, 1);
+    if (ratio < 1.5) green.push({ emoji: "⚖️", label: "Balanced initiators", detail: "You both start conversations equally" });
+    else if (ratio > 3) {
+      const chaser = Object.entries(initiatorCounts).sort((a, b) => b[1] - a[1])[0][0];
+      red.push({ emoji: "📱", label: "One-sided initiator", detail: `${chaser} starts ${Math.round((maxInit / (maxInit + minInit)) * 100)}% of conversations` });
+    }
+  }
+
+  // --- Response time ---
+  const times = Object.values(avgResponseTimes).filter(t => t !== null) as number[];
+  if (times.length >= 2) {
+    const fastest = Math.min(...times);
+    const slowest = Math.max(...times);
+    if (fastest < 5) green.push({ emoji: "⚡", label: "Lightning replies", detail: `Average reply in under 5 minutes` });
+    if (slowest / Math.max(fastest, 0.1) > 4) {
+      red.push({ emoji: "🐌", label: "Reply time gap", detail: `${Math.round(slowest / Math.max(fastest, 1))}x difference in reply speed` });
+    }
+  }
+
+  // --- Laughter ---
+  const totalLaughs = Object.values(laughterCounts).reduce((a, b) => a + b, 0);
+  const laughRatio = totalLaughs / Math.max(totalMessages, 1);
+  if (laughRatio > 0.08) green.push({ emoji: "😂", label: "High laughter ratio", detail: `${Math.round(laughRatio * 100)}% of messages contain laughter` });
+  if (laughRatio < 0.01) red.push({ emoji: "😐", label: "Low laughter", detail: "Less than 1% of messages have any laughs" });
+
+  // --- Streaks ---
+  if (streakData.longestStreak.days > 90) green.push({ emoji: "🔥", label: `${streakData.longestStreak.days}-day streak`, detail: "Impressive daily commitment" });
+
+  // --- Sentiment ---
+  const happyDays = sentimentDays.filter(d => d.tag === 'happy').length;
+  const totalDays = Math.max(sentimentDays.length, 1);
+  const happyPct = happyDays / totalDays;
+  if (happyPct > 0.5) green.push({ emoji: "☀️", label: "Mostly positive vibes", detail: `${Math.round(happyPct * 100)}% happy days` });
+  const tensionDays = sentimentDays.filter(d => d.tag === 'tension').length;
+  if (tensionDays / totalDays > 0.3) red.push({ emoji: "⚡", label: "High tension days", detail: `${Math.round((tensionDays / totalDays) * 100)}% of days have tension` });
+
+  // --- Deleter ratio ---
+  const deleteRatios = Object.values(deleterStats).map(d => d.ratio);
+  const maxDelete = Math.max(...deleteRatios, 0);
+  if (maxDelete > 5) {
+    const deleter = Object.entries(deleterStats).sort((a, b) => b[1].ratio - a[1].ratio)[0][0];
+    red.push({ emoji: "🗑️", label: "Serial deleter detected", detail: `${deleter} deletes ${maxDelete.toFixed(1)}% of messages` });
+  }
+
+  // --- Dry texting ---
+  const dryRatios = Object.values(curiosityStats.dryTextRatio);
+  const maxDry = Math.max(...dryRatios, 0);
+  if (maxDry > 20) {
+    const dryer = Object.entries(curiosityStats.dryTextRatio).sort((a, b) => b[1] - a[1])[0][0];
+    red.push({ emoji: "🏜️", label: "Dry texter alert", detail: `${dryer} sends ${Math.round(maxDry)}% one-word replies` });
+  }
+  if (maxDry < 8 && dryRatios.length >= 2) green.push({ emoji: "💬", label: "Both put in effort", detail: "Low dry-texting rate from everyone" });
+
+  // --- Convo killer imbalance ---
+  if (convoKillerData.totalConvosEnded > 10) {
+    const killValues = Object.values(convoKillerData.killCounts);
+    if (killValues.length >= 2) {
+      const maxKill = Math.max(...killValues);
+      const pct = Math.round((maxKill / convoKillerData.totalConvosEnded) * 100);
+      if (pct > 70) {
+        const killer = Object.entries(convoKillerData.killCounts).sort((a, b) => b[1] - a[1])[0][0];
+        red.push({ emoji: "💀", label: "Conversation killer", detail: `${killer} ends ${pct}% of conversations` });
+      }
+    }
+  }
+
+  // --- Double text imbalance ---
+  const dtValues = Object.values(doubleTextRatios);
+  if (dtValues.length >= 2) {
+    const maxDt = Math.max(...dtValues);
+    const minDt = Math.min(...dtValues);
+    if (maxDt > 15 && maxDt - minDt > 10) {
+      red.push({ emoji: "📩", label: "Double-text imbalance", detail: "One person double-texts way more than the other" });
+    }
+  }
+
+  // Sort by relevance (flags with more specific detail first) and limit
+  return { green: green.slice(0, 5), red: red.slice(0, 5) };
+}
+
+// ==========================================
+// Who Said It? Quiz
+// ==========================================
+export interface QuizMessage {
+  text: string;
+  sender: string;
+  date: Date;
+}
+
+export function generateQuizMessages(messages: Message[], count = 8): QuizMessage[] {
+  // Filter for interesting messages: not too short, not too long, no media, no links
+  const candidates = messages.filter(m => {
+    const t = m.text.trim();
+    if (t.length < 15 || t.length > 300) return false;
+    if (/omitted|<Media|http[s]?:\/\//i.test(t)) return false;
+    if (/^(haha|lol|ok|yes|no|yeah|hmm|nice|cool|true|sure)\s*$/i.test(t)) return false;
+    if (t.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{27BF}\s]/gu, '').length < 5) return false;
+    return true;
+  });
+
+  if (candidates.length < count) return candidates.map(m => ({ text: m.text, sender: m.sender, date: m.date }));
+
+  // Fully shuffle candidates so every play is different
+  const shuffled = [...candidates];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  // Pick `count` messages while balancing senders as much as possible
+  const parts = Array.from(new Set(messages.map(m => m.sender)));
+  const selected: QuizMessage[] = [];
+  const senderCounts: Record<string, number> = {};
+  const maxPerSender = Math.ceil(count / parts.length) + 1;
+
+  for (const m of shuffled) {
+    if (selected.length >= count) break;
+    const sc = senderCounts[m.sender] || 0;
+    if (sc >= maxPerSender) continue; // Don't over-represent one sender
+    selected.push({ text: m.text, sender: m.sender, date: m.date });
+    senderCounts[m.sender] = sc + 1;
+  }
+
+  // Final shuffle of selected
+  for (let i = selected.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [selected[i], selected[j]] = [selected[j], selected[i]];
+  }
+
+  return selected.slice(0, count);
+}
+
+// ==========================================
+// Streak Tracker
+// ==========================================
+export interface StreakData {
+  longestStreak: { days: number; start: Date; end: Date };
+  currentStreak: { days: number; start: Date };
+  streakBrokenOn: Date | null;
+  totalActiveDays: number;
+  totalDays: number;
+}
+
+export function streakTracker(messages: Message[]): StreakData {
+  if (messages.length === 0) {
+    return {
+      longestStreak: { days: 0, start: new Date(), end: new Date() },
+      currentStreak: { days: 0, start: new Date() },
+      streakBrokenOn: null,
+      totalActiveDays: 0,
+      totalDays: 0,
+    };
+  }
+
+  const daySet = new Set<string>();
+  for (const m of messages) {
+    const d = m.date;
+    daySet.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+  }
+
+  const sortedDays = Array.from(daySet).sort();
+  const totalActiveDays = sortedDays.length;
+
+  const firstDay = new Date(sortedDays[0]);
+  const lastDay = new Date(sortedDays[sortedDays.length - 1]);
+  const totalDays = Math.round((lastDay.getTime() - firstDay.getTime()) / 86400000) + 1;
+
+  let longestStart = 0, longestLen = 1;
+  let curStart = 0, curLen = 1;
+
+  for (let i = 1; i < sortedDays.length; i++) {
+    const prev = new Date(sortedDays[i - 1]);
+    const curr = new Date(sortedDays[i]);
+    const diffDays = Math.round((curr.getTime() - prev.getTime()) / 86400000);
+
+    if (diffDays === 1) {
+      curLen++;
+    } else {
+      if (curLen > longestLen) {
+        longestLen = curLen;
+        longestStart = curStart;
+      }
+      curStart = i;
+      curLen = 1;
+    }
+  }
+  if (curLen > longestLen) {
+    longestLen = curLen;
+    longestStart = curStart;
+  }
+
+  // Current streak from today/yesterday backwards
+  const today = new Date();
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayKey = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+
+  let currentStreakDays = 0;
+  let currentStreakStart = today;
+
+  const lastSortedDay = sortedDays[sortedDays.length - 1];
+  if (lastSortedDay === todayKey || lastSortedDay === yesterdayKey) {
+    currentStreakDays = 1;
+    currentStreakStart = new Date(sortedDays[sortedDays.length - 1]);
+    for (let i = sortedDays.length - 2; i >= 0; i--) {
+      const curr = new Date(sortedDays[i + 1]);
+      const prev = new Date(sortedDays[i]);
+      if (Math.round((curr.getTime() - prev.getTime()) / 86400000) === 1) {
+        currentStreakDays++;
+        currentStreakStart = prev;
+      } else break;
+    }
+  }
+
+  const longestEnd = new Date(sortedDays[longestStart + longestLen - 1]);
+  const brokenOn = new Date(longestEnd);
+  brokenOn.setDate(brokenOn.getDate() + 1);
+
+  return {
+    longestStreak: { days: longestLen, start: new Date(sortedDays[longestStart]), end: longestEnd },
+    currentStreak: { days: currentStreakDays, start: currentStreakStart },
+    streakBrokenOn: longestLen > 1 ? brokenOn : null,
+    totalActiveDays,
+    totalDays,
+  };
+}
+
+// ==========================================
+// Conversation Killer
+// ==========================================
+export interface ConvoKillerData {
+  killCounts: Record<string, number>;
+  topKillerMessages: Record<string, { text: string; count: number }[]>;
+  totalConvosEnded: number;
+}
+
+export function conversationKiller(messages: Message[], silenceHours = 6): ConvoKillerData {
+  const killCounts: Record<string, number> = {};
+  const killerMessages: Record<string, Record<string, number>> = {};
+
+  for (let i = 0; i < messages.length - 1; i++) {
+    const curr = messages[i];
+    const next = messages[i + 1];
+    const gapHrs = (next.date.getTime() - curr.date.getTime()) / 3600000;
+
+    if (gapHrs >= silenceHours) {
+      killCounts[curr.sender] = (killCounts[curr.sender] || 0) + 1;
+      if (!killerMessages[curr.sender]) killerMessages[curr.sender] = {};
+      const normalized = curr.text.trim().toLowerCase().slice(0, 50);
+      if (normalized.length > 0) {
+        killerMessages[curr.sender][normalized] = (killerMessages[curr.sender][normalized] || 0) + 1;
+      }
+    }
+  }
+
+  // Last message is always a convo ender
+  if (messages.length > 0) {
+    const last = messages[messages.length - 1];
+    killCounts[last.sender] = (killCounts[last.sender] || 0) + 1;
+  }
+
+  const topKillerMessages: Record<string, { text: string; count: number }[]> = {};
+  for (const [sender, msgMap] of Object.entries(killerMessages)) {
+    topKillerMessages[sender] = Object.entries(msgMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([text, count]) => ({ text, count }));
+  }
+
+  return {
+    killCounts,
+    topKillerMessages,
+    totalConvosEnded: Object.values(killCounts).reduce((a, b) => a + b, 0),
+  };
+}
+
+// ==========================================
+// First vs Now Comparison
+// ==========================================
+export interface PeriodStats {
+  avgResponseTime: Record<string, number | null>;
+  avgMessageLength: Record<string, number>;
+  emojiPerMessage: Record<string, number>;
+  laughterPerMessage: Record<string, number>;
+  messagesPerDay: number;
+  period: string;
+}
+
+export interface FirstVsNowData {
+  first: PeriodStats;
+  now: PeriodStats;
+}
+
+function computePeriodStats(msgs: Message[], label: string): PeriodStats {
+  const parts = Array.from(new Set(msgs.map(m => m.sender)));
+  const emojiPattern = /[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}]/gu;
+  const laughPattern = /(haha+|lol+|lmao+|rofl+|😂|🤣|😹|😆)/gi;
+
+  const counts: Record<string, number> = {};
+  const totalLength: Record<string, number> = {};
+  const emojiCounts: Record<string, number> = {};
+  const laughCounts: Record<string, number> = {};
+
+  for (const m of msgs) {
+    counts[m.sender] = (counts[m.sender] || 0) + 1;
+    totalLength[m.sender] = (totalLength[m.sender] || 0) + m.text.trim().split(/\s+/).filter(Boolean).length;
+    const emojis = m.text.match(emojiPattern);
+    emojiCounts[m.sender] = (emojiCounts[m.sender] || 0) + (emojis ? emojis.length : 0);
+    const laughs = m.text.match(laughPattern);
+    laughCounts[m.sender] = (laughCounts[m.sender] || 0) + (laughs ? laughs.length : 0);
+  }
+
+  // Response times
+  const responseTimes: Record<string, number[]> = {};
+  for (let i = 1; i < msgs.length; i++) {
+    if (msgs[i - 1].sender !== msgs[i].sender) {
+      const delta = (msgs[i].date.getTime() - msgs[i - 1].date.getTime()) / 60000;
+      if (delta > 0.1 && delta < 480) {
+        if (!responseTimes[msgs[i].sender]) responseTimes[msgs[i].sender] = [];
+        responseTimes[msgs[i].sender].push(delta);
+      }
+    }
+  }
+
+  const avgResponseTime: Record<string, number | null> = {};
+  const avgMessageLength: Record<string, number> = {};
+  const emojiPerMessage: Record<string, number> = {};
+  const laughterPerMessage: Record<string, number> = {};
+
+  for (const p of parts) {
+    const times = responseTimes[p];
+    avgResponseTime[p] = times?.length ? times.reduce((a, b) => a + b, 0) / times.length : null;
+    const c = counts[p] || 1;
+    avgMessageLength[p] = (totalLength[p] || 0) / c;
+    emojiPerMessage[p] = (emojiCounts[p] || 0) / c;
+    laughterPerMessage[p] = (laughCounts[p] || 0) / c;
+  }
+
+  const daySet = new Set(msgs.map(m => format(m.date, 'yyyy-MM-dd')));
+
+  return {
+    avgResponseTime,
+    avgMessageLength,
+    emojiPerMessage,
+    laughterPerMessage,
+    messagesPerDay: msgs.length / Math.max(daySet.size, 1),
+    period: label,
+  };
+}
+
+export function firstVsNow(messages: Message[]): FirstVsNowData | null {
+  if (messages.length < 50) return null;
+
+  const sorted = [...messages].sort((a, b) => a.date.getTime() - b.date.getTime());
+  const firstDate = sorted[0].date;
+  const lastDate = sorted[sorted.length - 1].date;
+
+  const monthsDiff = (lastDate.getFullYear() - firstDate.getFullYear()) * 12 + (lastDate.getMonth() - firstDate.getMonth());
+  if (monthsDiff < 2) return null;
+
+  const firstMonthKey = `${firstDate.getFullYear()}-${String(firstDate.getMonth() + 1).padStart(2, '0')}`;
+  const lastMonthKey = `${lastDate.getFullYear()}-${String(lastDate.getMonth() + 1).padStart(2, '0')}`;
+
+  const firstMsgs = sorted.filter(m => `${m.date.getFullYear()}-${String(m.date.getMonth() + 1).padStart(2, '0')}` === firstMonthKey);
+  const lastMsgs = sorted.filter(m => `${m.date.getFullYear()}-${String(m.date.getMonth() + 1).padStart(2, '0')}` === lastMonthKey);
+
+  if (firstMsgs.length < 10 || lastMsgs.length < 10) return null;
+
+  return {
+    first: computePeriodStats(firstMsgs, format(firstDate, 'MMM yyyy')),
+    now: computePeriodStats(lastMsgs, format(lastDate, 'MMM yyyy')),
+  };
+}

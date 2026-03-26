@@ -1,5 +1,6 @@
 import { WrappedCard } from "./WrappedCard";
-import { MessageSquare, Calendar, Zap, Heart, Trophy, Quote, Sparkles } from "lucide-react";
+import { MessageSquare, Calendar, Zap, Heart, Trophy, Quote, Sparkles, Copy, Share2 } from "lucide-react";
+import { copyToClipboard, shareText, APP_URL } from "@/lib/shareUtils";
 
 interface WrappedShareablesProps {
   data: {
@@ -147,91 +148,87 @@ export const WrappedShareables = ({ data }: WrappedShareablesProps) => {
       const isModerate = avgMessagesPerDay > 15 && avgMessagesPerDay <= 40;
       const isQuiet = avgMessagesPerDay < 15;
       
-      // Calculate verdict score based on multiple factors. 
-      // specificWeight: higher means more specific conditions (3+ descriptors).
+      // Verdicts — punchy, meme-worthy, screenshot-bait
       const verdicts = [
-          // High energy + funny combinations
-          { condition: isVeryFunny && isVeryActive && isHappy, weight: 3, title: "The Comedians", desc: "Your chat is basically a stand-up routine with Olympic-level texting stamina." },
-          { condition: isVeryFunny && isActive && isBalanced, weight: 3, title: "The Jokers", desc: "Laughter is your love language, and you're both fluent." },
-          { condition: isFunny && isVeryActive && isGroup, weight: 3, title: "The Comedy Club", desc: "A group chat that never fails to deliver the laughs." },
-          { condition: isVeryFunny && isChaotic && isDuo, weight: 3, title: "Chaotic Comedians", desc: "Double texts and double laughs—pure chaos, pure joy." },
-          
-          // Chaos-based verdicts
-          { condition: isChaotic && isImbalanced, weight: 2, title: "Chaotic Evil", desc: "The amount of double texting happening here is frankly concerning." },
-          { condition: isChaotic && isBalanced, weight: 2, title: "Organized Chaos", desc: "You're both equally unhinged, and it's beautiful." },
-          { condition: isModerateChaos && isVeryActive, weight: 2, title: "The Text Tornado", desc: "Messages fly faster than thoughts can form." },
-          { condition: isChaotic && isSerious, weight: 2, title: "The Overthinkers", desc: "So many messages, so few laughs. Deep thinkers or anxious texters?" },
-          { condition: isModerateChaos && isFunny, weight: 2, title: "Controlled Chaos", desc: "You've mastered the art of being slightly unhinged together." },
-          
-          // Imbalance-based verdicts
-          { condition: isImbalanced && isActive, weight: 2, title: "The Chaser", desc: "One of you is running a marathon, the other is walking." },
-          { condition: isImbalanced && isQuiet, weight: 2, title: "The Initiator", desc: "One person carries the conversation, the other appreciates it." },
-          { condition: isSlightlyImbalanced && isHappy, weight: 2, title: "The Leader", desc: "One person sets the vibe, the other vibes along." },
-          { condition: isImbalanced && isMoody, weight: 2, title: "The Pursuer", desc: "One person tries harder, hoping to break through the silence." },
-          { condition: isImbalanced && isVeryActive, weight: 2, title: "The Marathon Runner", desc: "One person texts like they're being paid per message." },
-          
-          // Group-based verdicts
-          { condition: isLargeGroup && isActive, weight: 2, title: "The Squad", desc: "Chaotic energy but precise coordination." },
-          { condition: isGroup && isVeryFunny, weight: 2, title: "The Friend Group", desc: "Where inside jokes are born and memes never die." },
-          { condition: isGroup && isQuiet, weight: 2, title: "The Silent Majority", desc: "A group chat that knows when to stay quiet." },
-          { condition: isLargeGroup && isChaotic, weight: 2, title: "The Mob", desc: "Too many people, too many messages, too much chaos." },
-          { condition: isGroup && isBalanced, weight: 2, title: "The Council", desc: "Everyone gets a say, and everyone listens." },
-          
-          // Happiness-based verdicts
-          { condition: isVeryHappy && isBalanced && isDuo, weight: 3, title: "Soulmates?", desc: "Balanced, consistent, and kinda cute." },
-          { condition: isVeryHappy && isActive, weight: 2, title: "The Optimists", desc: "Every day is a good day in your chat." },
-          { condition: isHappy && isModerate && isBalanced, weight: 3, title: "The Steady Ones", desc: "Consistent happiness, consistent connection." },
-          { condition: isVeryHappy && isFunny, weight: 2, title: "The Joy Makers", desc: "You don't just chat, you create happiness together." },
-          { condition: isHappy && isQuiet, weight: 2, title: "The Peaceful Pair", desc: "Few words, many smiles." },
-          
-          // Activity-based verdicts
-          { condition: isVeryActive && isBalanced && isDuo, weight: 3, title: "The Power Texters", desc: "You text like your lives depend on it." },
-          { condition: isActive && isHappy && isDuo, weight: 2, title: "The Daily Check-Ins", desc: "Regular messages, regular smiles, regular connection." },
-          { condition: isModerate && isBalanced, weight: 1, title: "The Steady Stream", desc: "Not too much, not too little—just right." },
-          { condition: isQuiet && isHappy, weight: 2, title: "The Minimalists", desc: "Quality over quantity, and it shows." },
-          { condition: isVeryActive && isGroup, weight: 2, title: "The Active Squad", desc: "This group chat never sleeps." },
-          
-          // Serious/Moody combinations
-          { condition: isSerious && isQuiet && isDuo, weight: 3, title: "The Philosophers", desc: "Deep thoughts, few words, many meanings." },
-          { condition: isSerious && isActive, weight: 2, title: "The Thinkers", desc: "Every message is carefully crafted, every word matters." },
-          { condition: isMoody && isImbalanced, weight: 2, title: "The Roller Coaster", desc: "Ups and downs, but you always come back." },
-          { condition: isMoody && isBalanced, weight: 2, title: "The Realists", desc: "Life isn't always happy, but you're always there." },
-          { condition: isSerious && isBalanced, weight: 2, title: "The Mature Ones", desc: "You've moved past small talk into real connection." },
-          
-          // Special combinations
-          { condition: isVeryFunny && isVeryHappy && isVeryActive, weight: 4, title: "The Perfect Storm", desc: "Maximum laughs, maximum happiness, maximum messages." },
-          { condition: isCalm && isBalanced && isHappy, weight: 3, title: "The Zen Masters", desc: "Peaceful, balanced, and perfectly in sync." },
-          { condition: isModeratelyFunny && isNeutral && isModerate, weight: 2, title: "The Average Joes", desc: "Not too much, not too little—just perfectly normal." },
-          { condition: isVeryActive && isMoody, weight: 3, title: "The Emotional Texters", desc: "Every feeling gets a message, every message gets a feeling." },
-          { condition: isQuiet && isSerious && isDuo, weight: 3, title: "The Silent Understanding", desc: "You don't need words to know what the other is thinking." },
-          
-          // Edge cases
-          { condition: isVeryActive && isChaotic && isImbalanced && isMoody, weight: 4, title: "The Drama Queens", desc: "High energy, high emotion, high chaos." },
-          { condition: isQuiet && isCalm && isBalanced, weight: 3, title: "The Minimalists", desc: "Less is more, and you've mastered it." },
-          { condition: isFunny && isNeutral && isModerate, weight: 2, title: "The Lighthearted", desc: "You keep things fun without going overboard." },
-          { condition: isVeryHappy && isCalm && isDuo, weight: 3, title: "The Content Couple", desc: "Happy, peaceful, and perfectly content." },
-          { condition: isActive && isSlightlyImbalanced && isHappy, weight: 3, title: "The Energetic Pair", desc: "One leads, one follows, both happy." },
-          
-          // More specific combinations
-          { condition: isVeryFunny && isQuiet, weight: 3, title: "The Witty Minimalists", desc: "Few words, big laughs." },
-          { condition: isFunny && isMoody, weight: 2, title: "The Comedians in Crisis", desc: "You laugh through the hard times together." },
-          { condition: isVeryActive && isVeryHappy && isGroup, weight: 3, title: "The Happy Mob", desc: "Too many messages, too much happiness." },
-          { condition: isModerate && isNeutral && isBalanced, weight: 2, title: "The Stable Ones", desc: "Steady as she goes, day after day." },
-          { condition: isActive && isFunny && isSlightlyImbalanced, weight: 3, title: "The Fun Chasers", desc: "One person brings the energy, both bring the laughs." },
-          
-          // Additional unique combinations
-          { condition: isVeryFunny && isCalm && isDuo, weight: 3, title: "The Gentle Jokers", desc: "Soft-spoken but always ready with a joke." },
-          { condition: isSerious && isVeryActive && isDuo, weight: 3, title: "The Deep Conversationalists", desc: "Every message is a chapter in your story." },
-          { condition: isHappy && isChaotic && isGroup, weight: 3, title: "The Joyful Chaos", desc: "Organized mess, happy hearts." },
-          { condition: isModeratelyFunny && isActive && isBalanced, weight: 3, title: "The Balanced Bunch", desc: "Fun, active, and perfectly in sync." },
-          { condition: isQuiet && isVeryHappy, weight: 2, title: "The Silent Smilers", desc: "You don't need to say much to be happy." },
-          
-          // Final catch-all verdicts (low weight)
-          { condition: isDuo && isBalanced && isModerate, weight: 1, title: "The Perfect Pair", desc: "You've found your rhythm, and it's beautiful." },
-          { condition: isGroup && isModerate && isNeutral, weight: 1, title: "The Steady Group", desc: "Consistent communication, consistent connection." },
-          { condition: isActive && isHappy && isBalanced, weight: 1, title: "The Happy Communicators", desc: "You talk, you laugh, you connect." },
-          { condition: isModerate && isFunny && isDuo, weight: 1, title: "The Fun Duo", desc: "Regular laughs, regular connection." },
-          { condition: true, weight: 0, title: "The Unique Ones", desc: "Your chat is one of a kind, just like your connection." }
+          // === LEGENDARY TIER (4+ conditions) ===
+          { condition: isVeryFunny && isVeryHappy && isVeryActive, weight: 5, title: "Certified Unhinged Besties", desc: "You two text like you're being charged per minute of silence. Therapists would study this chat." },
+          { condition: isVeryActive && isChaotic && isImbalanced && isMoody, weight: 5, title: "The Emotional Rollercoaster", desc: "One of you is screaming into the void and the other is screaming back. It's giving toxic but make it art." },
+          { condition: isVeryFunny && isVeryActive && isHappy, weight: 4, title: "Serotonin Dealers", desc: "This chat is a controlled substance. Someone's getting a dopamine hit every 30 seconds." },
+          { condition: isVeryHappy && isBalanced && isDuo, weight: 4, title: "Disgustingly Wholesome", desc: "This is the chat people screenshot and post with 'I want what they have.' Nauseating. Beautiful." },
+          { condition: isVeryActive && isBalanced && isDuo, weight: 4, title: "Telepathically Connected", desc: "You reply so fast it's like you share a brain cell. And honestly? That one cell is doing great work." },
+          { condition: isVeryFunny && isCalm && isDuo, weight: 4, title: "The Sleeper Agents of Comedy", desc: "Quiet energy but your humor hits like a freight train with no warning." },
+
+          // === HIGH ENERGY + FUNNY ===
+          { condition: isVeryFunny && isActive && isBalanced, weight: 3, title: "The Comedy Marriage", desc: "You finish each other's jokes. The world doesn't deserve this chat." },
+          { condition: isFunny && isVeryActive && isGroup, weight: 3, title: "The Group Chat That Peaked", desc: "Every other group chat you're in is just a waiting room for this one." },
+          { condition: isVeryFunny && isChaotic && isDuo, weight: 3, title: "Partners in Chaos", desc: "You don't just double text — you speedrun conversations like it's an Olympic sport." },
+          { condition: isVeryFunny && isQuiet, weight: 3, title: "Silent But Deadly", desc: "Few messages, but every single one lands. You're the snipers of humor." },
+
+          // === CHAOS TIER ===
+          { condition: isChaotic && isImbalanced, weight: 3, title: "Main Character vs. Side Character", desc: "One of you is writing a novel in real time. The other sends 'lol' and thinks that's enough." },
+          { condition: isChaotic && isBalanced, weight: 3, title: "Mutually Unhinged", desc: "You're both equally chaotic and somehow that's the glue. Two wrongs making a right." },
+          { condition: isModerateChaos && isVeryActive, weight: 3, title: "The Notification Nightmare", desc: "Anyone in a meeting with either of you has suffered. Your phone buzzes could power a small city." },
+          { condition: isChaotic && isSerious, weight: 3, title: "Anxious Attachment: The Chat", desc: "All those messages and barely a 'haha' in sight. Are you two okay? Genuinely asking." },
+          { condition: isModerateChaos && isFunny, weight: 2, title: "Controlled Demolition", desc: "Chaotic enough to be fun, structured enough to not lose friends." },
+
+          // === IMBALANCE TIER ===
+          { condition: isImbalanced && isActive, weight: 3, title: "The Situationship Energy", desc: "One of you is writing think-pieces and the other is responding with voice notes of silence." },
+          { condition: isImbalanced && isQuiet, weight: 2, title: "The Orbiter and The Orbited", desc: "One person sends the texts. The other person IS the text." },
+          { condition: isSlightlyImbalanced && isHappy, weight: 2, title: "The Golden Retriever & The Cat", desc: "One of you runs up excited every time. The other pretends to be unbothered but always shows up." },
+          { condition: isImbalanced && isMoody, weight: 3, title: "Breadcrumbing Championship", desc: "One person gives paragraphs, the other gives crumbs. It's giving unrequited energy." },
+          { condition: isImbalanced && isVeryActive, weight: 3, title: "The Filibuster", desc: "One of you treats this chat like a TED talk. The audience is polite but checked out." },
+
+          // === GROUP CHAT TIER ===
+          { condition: isLargeGroup && isActive, weight: 3, title: "The Avengers Assemble", desc: "This group chat has more coordination than most companies. Someone should hire all of you." },
+          { condition: isGroup && isVeryFunny, weight: 3, title: "The War Room (for Memes)", desc: "Important decisions get ignored. But that meme from 3 weeks ago? Still getting referenced." },
+          { condition: isGroup && isQuiet, weight: 2, title: "The Dead Group Chat", desc: "Someone should check the pulse. Last message was probably 'who's coming?' and nobody replied." },
+          { condition: isLargeGroup && isChaotic, weight: 3, title: "The Group Chat Nobody Mutes (Somehow)", desc: "Pure chaos but leaving would feel like a breakup. You're all trapped and loving it." },
+          { condition: isGroup && isBalanced, weight: 2, title: "Democracy Actually Working", desc: "Everyone talks. Everyone listens. This might be the only functioning democracy left." },
+          { condition: isVeryActive && isVeryHappy && isGroup, weight: 4, title: "The Main Character Group", desc: "Other group chats wish they had this energy. Your notifications alone could fill a novel." },
+          { condition: isHappy && isChaotic && isGroup, weight: 3, title: "Beautiful Disaster", desc: "Organized? No. Fun? Absolutely. Someone's always typing and nobody's ever on topic." },
+
+          // === WHOLESOME TIER ===
+          { condition: isVeryHappy && isActive, weight: 2, title: "The Comfort Chat", desc: "This is the chat you open when the world is falling apart. Digital chicken soup." },
+          { condition: isHappy && isModerate && isBalanced, weight: 3, title: "Emotionally Mature and It Shows", desc: "Balanced effort, genuine happiness. You've unlocked the secret to not making texting stressful." },
+          { condition: isVeryHappy && isFunny, weight: 3, title: "The Serotonin Factory", desc: "Every notification from this chat makes your brain go brrr in the best way possible." },
+          { condition: isHappy && isQuiet, weight: 2, title: "The Cozy Corner", desc: "Like a warm blanket in chat form. Not many words, but every one counts." },
+          { condition: isVeryHappy && isCalm && isDuo, weight: 3, title: "Rom-Com in Real Life", desc: "This chat reads like a movie script where everything works out. Disgusting. Don't stop." },
+          { condition: isQuiet && isVeryHappy, weight: 2, title: "The Still Water Runs Deep", desc: "You don't flood the chat, but when you do talk, it matters." },
+
+          // === CHILL / MODERATE TIER ===
+          { condition: isActive && isHappy && isDuo, weight: 2, title: "The 'Good Morning' Regulars", desc: "You text like clockwork. Reliable, steady, and lowkey couple goals." },
+          { condition: isModerate && isBalanced, weight: 1, title: "The Goldilocks Zone", desc: "Not too hot, not too cold. You've figured out texting without the anxiety." },
+          { condition: isQuiet && isHappy, weight: 2, title: "Quality Over Quantity", desc: "You text like old souls in a world of double-tappers. Respect." },
+          { condition: isVeryActive && isGroup, weight: 2, title: "The Never-Ending Thread", desc: "Scrolling up in this chat is a workout. Somebody should sell tickets." },
+
+          // === SERIOUS / DEEP TIER ===
+          { condition: isSerious && isQuiet && isDuo, weight: 3, title: "The 3 AM Philosophers", desc: "You don't do small talk. Every message is a thesis statement with emotional footnotes." },
+          { condition: isSerious && isActive, weight: 2, title: "The Debate Club", desc: "Less 'haha' more 'hmm actually.' Every conversation is a seminar and you're both the professor." },
+          { condition: isMoody && isImbalanced, weight: 2, title: "It's Complicated", desc: "The vibes shift faster than the weather. Someone's always slightly more invested." },
+          { condition: isMoody && isBalanced, weight: 2, title: "Trauma Bonded (Affectionate)", desc: "You ride the waves together. Not always happy, but always honest." },
+          { condition: isSerious && isBalanced, weight: 2, title: "The Grown-Ups", desc: "While everyone else is sending memes, you're having actual conversations. Revolutionary." },
+          { condition: isSerious && isVeryActive && isDuo, weight: 3, title: "The Podcast That Texts", desc: "This isn't a chat, it's an ongoing documentary. Every message is a new episode." },
+
+          // === FUNNY COMBOS ===
+          { condition: isFunny && isMoody, weight: 3, title: "Crying Laughing (Literally)", desc: "You laugh through the pain and honestly? Iconic. Therapists hate this one trick." },
+          { condition: isModeratelyFunny && isActive && isBalanced, weight: 2, title: "The Functional Friend Group", desc: "Funny enough to not bore everyone, chill enough to not exhaust everyone. Chef's kiss." },
+          { condition: isActive && isFunny && isSlightlyImbalanced, weight: 3, title: "The Hype Person & The Talent", desc: "One brings the content, the other brings the 'LMAOOO.' Both are essential." },
+          { condition: isFunny && isNeutral && isModerate, weight: 2, title: "The Chill Comedians", desc: "You're funny without trying too hard. The effortless cool of the chat world." },
+
+          // === SPECIAL COMBOS ===
+          { condition: isCalm && isBalanced && isHappy, weight: 3, title: "The Zen Garden", desc: "This chat has better energy than most meditation apps. Peaceful, balanced, healing." },
+          { condition: isModeratelyFunny && isNeutral && isModerate, weight: 2, title: "Perfectly Mid (Compliment)", desc: "Not dramatic, not boring. You've achieved the impossible: a normal, healthy chat." },
+          { condition: isVeryActive && isMoody, weight: 3, title: "The Emotional Speedrun", desc: "Happy to sad to angry to 'lol nvm' — all in 10 minutes. A masterclass in range." },
+          { condition: isQuiet && isSerious && isDuo, weight: 3, title: "The Unspoken Understanding", desc: "You communicate in vibes, not volume. Half your conversations happen between the lines." },
+          { condition: isQuiet && isCalm && isBalanced, weight: 3, title: "The Introverts' Paradise", desc: "Silence isn't awkward here. It's just another way of being together." },
+          { condition: isActive && isSlightlyImbalanced && isHappy, weight: 3, title: "The Fan & The Rockstar", desc: "One person leads the energy, both ride the wave. It works and you know it." },
+
+          // === CATCH-ALL TIERS ===
+          { condition: isDuo && isBalanced && isModerate, weight: 1, title: "Relationship Goals (Quietly)", desc: "No drama, no chaos, just two people who figured it out. The most underrated flex." },
+          { condition: isGroup && isModerate && isNeutral, weight: 1, title: "The Reliable Group Chat", desc: "Not the most exciting, but the one that always comes through when it matters." },
+          { condition: isActive && isHappy && isBalanced, weight: 1, title: "The Green Flag Chat", desc: "If this chat were a dating profile, everyone would swipe right." },
+          { condition: isModerate && isFunny && isDuo, weight: 1, title: "The Inside Joke Factory", desc: "Half your humor makes zero sense to outsiders. And that's what makes it perfect." },
+          { condition: true, weight: 0, title: "One of a Kind", desc: "Your chat doesn't fit any pattern we've seen. You've broken the algorithm. Congratulations, you're special." }
       ];
       
             // Build flattened score distribution: all verdicts have some chance.
@@ -475,6 +472,37 @@ export const WrappedShareables = ({ data }: WrappedShareablesProps) => {
                 </div>
             </WrappedCard>
             </div>
+        </div>
+
+        {/* Verdict Share Actions */}
+        <div className="flex flex-col items-center gap-4 mt-4">
+            <div className="flex items-center gap-3">
+                <button
+                    onClick={() => copyToClipboard(`Our verdict: ${verdict.title} — "${verdict.desc}" \n\nTry yours: ${APP_URL}`)}
+                    className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold bg-foreground/5 hover:bg-foreground/10 rounded-full transition-colors"
+                >
+                    <Copy className="w-4 h-4" />
+                    Copy Verdict
+                </button>
+                <button
+                    onClick={() => shareText(`Our verdict: ${verdict.title} — "${verdict.desc}" \n\nAnalyze yours: ${APP_URL}`)}
+                    className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors"
+                >
+                    <Share2 className="w-4 h-4" />
+                    Share Verdict
+                </button>
+            </div>
+        </div>
+
+        {/* Challenge a Friend */}
+        <div className="flex flex-col items-center gap-3 mt-12 pt-8 border-t border-border/30">
+            <p className="text-lg font-display font-bold text-center">Think your friend's chat is better?</p>
+            <button
+                onClick={() => shareText(`I just got "${verdict.title}" on Wavelength. Think yours is better? Analyze your WhatsApp chat: ${APP_URL}`)}
+                className="px-8 py-3 bg-primary text-primary-foreground rounded-xl font-bold text-base hover:opacity-90 transition-all hover:scale-105 active:scale-95"
+            >
+                Challenge a Friend
+            </button>
         </div>
     </div>
   );

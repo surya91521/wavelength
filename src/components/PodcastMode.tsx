@@ -36,11 +36,18 @@ export const PodcastMode = ({ stats, participants }: PodcastModeProps) => {
           <div className="space-y-4">
             <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
               <p className="text-sm font-medium mb-2">
-                <span className="font-bold text-primary">{podcaster.sender}</span> sent {podcaster.count} voice notes this year.
+                <span className="font-bold text-primary">{podcaster.sender}</span> sent {podcaster.count} voice notes.
               </p>
               <p className="text-sm text-muted-foreground">
-                If we assume they average 30 seconds, you've recorded a{' '}
-                <span className="font-semibold">{podcaster.hours.toFixed(1)}-hour podcast</span> for them.
+                That's roughly a{' '}
+                <span className="font-semibold">{podcaster.hours.toFixed(1)}-hour podcast</span> nobody subscribed to.
+              </p>
+              <p className="text-xs text-muted-foreground mt-2 italic">
+                {podcaster.count > 200
+                  ? "At this point, just start a Spotify podcast. You've got the content."
+                  : podcaster.count > 50
+                  ? "A true voice note enthusiast. Typing is for amateurs apparently."
+                  : "A casual podcaster. Dips into voice notes when typing feels like too much effort."}
               </p>
             </div>
             <div className="space-y-2">

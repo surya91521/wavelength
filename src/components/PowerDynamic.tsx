@@ -141,14 +141,24 @@ export const PowerDynamic = ({
           </div>
         </div>
         
-        {/* Simple Insight */}
+        {/* Spicy Insight */}
         <p className="text-center text-sm text-muted-foreground italic border-t border-border/50 pt-4">
-             {participants.length > 2 
-                ? `${fastestResponder} is currently the fastest responder.`
-                : participants[0] === fastestResponder 
-                    ? `${participants[0]} tends to reply faster.`
-                    : `${participants[1]} tends to reply faster.`
-             }
+             {(() => {
+                const fastest = fastestResponder;
+                const slowest = sortedByResponseTime[sortedByResponseTime.length - 1];
+                const fastTime = avgResponseTimes[fastest] || 0;
+                const slowTime = avgResponseTimes[slowest] || 0;
+                const ratio = slowTime && fastTime ? slowTime / fastTime : 1;
+
+                if (participants.length > 2) {
+                    if (ratio > 5) return `${fastest} replies like their phone is glued to their hand. Everyone else? On their own schedule.`;
+                    return `${fastest} is the group's fastest replier. The rest of you... take notes.`;
+                }
+                if (ratio > 10) return `${fastest} replies instantly. ${slowest} replies... eventually. The audacity.`;
+                if (ratio > 4) return `${fastest} is clearly more invested in replying fast. ${slowest}, we see you taking your sweet time.`;
+                if (ratio > 2) return `${fastest} replies faster, but ${slowest} isn't far behind. Healthy-ish.`;
+                return `You both reply at about the same speed. Either you're both obsessed or both unbothered.`;
+             })()}
         </p>
 
       </div>

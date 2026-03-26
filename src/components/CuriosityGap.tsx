@@ -62,10 +62,17 @@ export const CuriosityGap = ({ stats, participants }: CuriosityGapProps) => {
                     {interviewer.count} questions out of {totalQuestions} total
                   </p>
                 )}
+                <p className="text-xs text-muted-foreground mt-2 italic">
+                  {interviewer.ratio > 70
+                    ? "Basically running a podcast interview at this point. Someone get them a mic."
+                    : interviewer.ratio > 55
+                    ? "The curious one. Always asking, always caring, rarely getting the same energy back."
+                    : "Slightly more curious than the rest. The question-asker of the group."}
+                </p>
               </div>
               {participants.length === 2 && (
                 <p className="text-xs text-muted-foreground italic">
-                  {participants.find(p => p !== interviewer.sender)} mostly just answers. Try asking "How are you?" back!
+                  {participants.find(p => p !== interviewer.sender)} mostly just answers. The mystery remains.
                 </p>
               )}
             </div>
@@ -91,10 +98,19 @@ export const CuriosityGap = ({ stats, participants }: CuriosityGapProps) => {
                   {dryTexter.ratio.toFixed(0)}% of <span className="font-bold text-primary">{dryTexter.sender}</span>'s replies are one word.
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  You are technically a <span className="font-semibold">"Dry Texter"</span>
+                  Officially a <span className="font-semibold">
+                    {dryTexter.ratio > 25 ? '"Desert Texter" 🏜️' : dryTexter.ratio > 15 ? '"Dry Texter" 🌵' : '"Slightly Dehydrated Texter"'}
+                  </span>
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">
                   {dryTexter.count} one-word messages detected
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 italic">
+                  {dryTexter.ratio > 25
+                    ? "k. ok. yeah. cool. This person's keyboard only has 5 keys."
+                    : dryTexter.ratio > 15
+                    ? "A person of few words. Very few. Concerningly few."
+                    : "Not terrible, but there's room to grow. Try a full sentence sometime."}
                 </p>
               </div>
             </div>

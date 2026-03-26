@@ -53,6 +53,13 @@ export interface AnalysisData {
     redFlags: Record<string, number>;
   };
   profanityStats: Record<string, { total: number; topWords: { word: string; count: number }[] }>;
+
+  // New Features
+  streakData: import('./analytics').StreakData;
+  convoKillerData: import('./analytics').ConvoKillerData;
+  firstVsNowData: import('./analytics').FirstVsNowData | null;
+  wavelengthScore: import('./analytics').WavelengthScoreResult;
+  flagData: { green: import('./analytics').Flag[]; red: import('./analytics').Flag[] };
 }
 
 export interface SentimentDay {
@@ -76,3 +83,6 @@ export interface OnThisDayMessage {
   yearsAgo: number;
   date: Date;
 }
+
+// Re-export analytics types for convenience
+export type { QuizMessage, StreakData, ConvoKillerData, FirstVsNowData, PeriodStats, WavelengthScoreResult, Flag } from './analytics';

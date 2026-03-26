@@ -8,7 +8,6 @@ import { GhostHours } from "@/components/GhostHours";
 import { SentimentHeatmap } from "@/components/SentimentHeatmap";
 import { LaughterScore } from "@/components/LaughterScore";
 import { CircadianRhythm } from "@/components/CircadianRhythm";
-import { AttachmentStyle } from "@/components/AttachmentStyle";
 import { WrappedShareables } from "@/components/WrappedShareables";
 import { DeleterRatio } from "@/components/DeleterRatio";
 import { CuriosityGap } from "@/components/CuriosityGap";
@@ -16,6 +15,11 @@ import { PodcastMode } from "@/components/PodcastMode";
 import { EmojiDNA } from "@/components/EmojiDNA";
 import { SearchParty } from "@/components/SearchParty";
 import { ProfanityFilter } from "@/components/ProfanityFilter";
+import { WhoSaidItQuiz } from "@/components/WhoSaidItQuiz";
+import { StreakTracker } from "@/components/StreakTracker";
+import { ConversationKiller } from "@/components/ConversationKiller";
+import { FirstVsNow } from "@/components/FirstVsNow";
+import { FlagCard } from "@/components/FlagCard";
 import {
   Accordion,
   AccordionContent,
@@ -39,7 +43,7 @@ const Index = () => {
     const slangWords = analytics.findTopSlangWords(messages);
     const topSlang = slangWords.length > 0 ? slangWords[0].word : 'lol';
     
-    return {
+    const data: AnalysisData = {
       participants: parts,
       totalMessages: messages.length,
       dateRange: {
@@ -66,7 +70,27 @@ const Index = () => {
       podcastStats: analytics.podcastMode(messages),
       emojiStats: analytics.emojiDNA(messages),
       profanityStats: analytics.profanityCount(messages),
+      streakData: analytics.streakTracker(messages),
+      convoKillerData: analytics.conversationKiller(messages),
+      firstVsNowData: analytics.firstVsNow(messages),
+      wavelengthScore: { score: 0, tier: '', description: '' },
+      flagData: { green: [], red: [] },
     };
+
+    data.wavelengthScore = analytics.calculateWavelengthScore(
+      data.totalMessages, data.sentimentDays, data.laughterCounts,
+      data.initiatorCounts, data.streakData, data.avgResponseTimes,
+      data.doubleTextRatios, data.participants.length,
+    );
+
+    data.flagData = analytics.computeFlags(
+      data.initiatorCounts, data.avgResponseTimes, data.laughterCounts,
+      data.streakData, data.deleterStats, data.curiosityStats,
+      data.convoKillerData, data.doubleTextRatios, data.totalMessages,
+      data.sentimentDays, data.participants,
+    );
+
+    return data;
   };
 
   const handleFileUpload = async (file: File) => {
@@ -234,6 +258,14 @@ const Index = () => {
                   </div>
                 </div>
 
+                {/* Streak & Conversation Killer */}
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <StreakTracker data={analysisData.streakData} participants={analysisData.participants} />
+                    <ConversationKiller data={analysisData.convoKillerData} participants={analysisData.participants} />
+                  </div>
+                </div>
+
                 {/* Petty Metrics: Deleter Ratio */}
                 <div className="space-y-6">
                   <DeleterRatio stats={analysisData.deleterStats} participants={analysisData.participants} />
@@ -252,13 +284,17 @@ const Index = () => {
                   <CuriosityGap stats={analysisData.curiosityStats} participants={analysisData.participants} />
                 </div>
 
+                {/* Flag Report */}
+                <div className="space-y-6">
+                  <FlagCard flags={analysisData.flagData} />
+                </div>
+
                 {/* Deep Patterns */}
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <GhostHours data={analysisData.heatmapData} />
                     <CircadianRhythm circadianData={analysisData.circadianData} />
                   </div>
-                  <AttachmentStyle attachmentStyle={analysisData.attachmentStyle} participants={analysisData.participants} />
                 </div>
 
                 {/* Petty Metrics: Podcast Mode */}
@@ -273,6 +309,18 @@ const Index = () => {
                     <SearchParty messages={messages} participants={analysisData.participants} />
                   </div>
                   <ProfanityFilter messages={messages} participants={analysisData.participants} />
+                </div>
+
+                {/* First vs Now */}
+                {analysisData.firstVsNowData && (
+                  <div className="space-y-6">
+                    <FirstVsNow data={analysisData.firstVsNowData} participants={analysisData.participants} />
+                  </div>
+                )}
+
+                {/* Who Said It Quiz */}
+                <div className="space-y-6">
+                  <WhoSaidItQuiz messages={messages} participants={analysisData.participants} />
                 </div>
 
                 {/* Wrapped Shareables */}

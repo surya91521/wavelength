@@ -64,12 +64,18 @@ export const LaughterScore = ({ laughterCounts, participants }: LaughterScorePro
       </div>
 
       <p className="text-center text-sm text-muted-foreground italic">
-        {participants.length > 2
-          ? `"${winner.name} seems to be the happiest one properly!"`
-          : sortedParticipants[0].count > sortedParticipants[1]?.count * 1.2
-            ? `"${sortedParticipants[0].name} gets way more laughs (${sortedParticipants[0].percent}%). The funny one!"`
-            : `"Pretty even! You both bring joy to the chat."`
-        }
+        {(() => {
+          if (participants.length > 2) {
+            const ratio = winner.count / (sortedParticipants[1]?.count || 1);
+            if (ratio > 3) return `${winner.name} is carrying the entire humor department. The rest of you owe them a thank-you card.`;
+            if (ratio > 1.5) return `${winner.name} laughs the most, but everyone chips in. A well-balanced comedy ecosystem.`;
+            return `Everyone laughs about the same. This group runs on good vibes only.`;
+          }
+          const ratio = sortedParticipants[0].count / (sortedParticipants[1]?.count || 1);
+          if (ratio > 2) return `${sortedParticipants[0].name} is basically the laugh track of this chat. ${sortedParticipants[1]?.name} is the comedian who doesn't laugh at their own jokes.`;
+          if (ratio > 1.3) return `${sortedParticipants[0].name} laughs more. Either they're funnier or they're just easier to please.`;
+          return `You both laugh equally. Either you're both hilarious or both extremely generous with 'haha'.`;
+        })()}
       </p>
     </div>
   );
