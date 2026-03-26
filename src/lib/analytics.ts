@@ -847,7 +847,7 @@ export function calculateWavelengthScore(
     description = "The effort gap is showing. Someone's carrying this chat.";
   } else {
     tier = "Stranger Danger";
-    description = "Are you sure you two actually know each other?";
+    description = participantCount > 2 ? "Are you sure this group actually talks?" : "Are you sure you two actually know each other?";
   }
 
   return { score, tier, description };
@@ -884,7 +884,7 @@ export function computeFlags(
     const maxInit = Math.max(...initValues);
     const minInit = Math.min(...initValues);
     const ratio = maxInit / Math.max(minInit, 1);
-    if (ratio < 1.5) green.push({ emoji: "⚖️", label: "Balanced initiators", detail: "You both start conversations equally" });
+    if (ratio < 1.5) green.push({ emoji: "⚖️", label: "Balanced initiators", detail: participants.length > 2 ? "Everyone starts conversations fairly equally" : "You both start conversations equally" });
     else if (ratio > 3) {
       const chaser = Object.entries(initiatorCounts).sort((a, b) => b[1] - a[1])[0][0];
       red.push({ emoji: "📱", label: "One-sided initiator", detail: `${chaser} starts ${Math.round((maxInit / (maxInit + minInit)) * 100)}% of conversations` });

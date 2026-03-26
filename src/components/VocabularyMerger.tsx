@@ -105,8 +105,8 @@ export const VocabularyMerger = ({ slangWords, wordUsage, participants }: Vocabu
           <span className="text-2xl font-display font-bold gradient-text ml-2">{syncScore}%</span>
         </p>
         <p className="text-xs text-muted-foreground text-center mt-1">
-          {syncScore >= 80 
-            ? "You two are linguistically inseparable!"
+          {syncScore >= 80
+            ? participants.length > 2 ? "This group is linguistically inseparable!" : "You two are linguistically inseparable!"
             : syncScore >= 50
             ? "You're picking up on each other's vibe"
             : "Your vocabularies are still unique"

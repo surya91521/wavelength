@@ -151,7 +151,7 @@ export const WrappedShareables = ({ data }: WrappedShareablesProps) => {
       // Verdicts — punchy, meme-worthy, screenshot-bait
       const verdicts = [
           // === LEGENDARY TIER (4+ conditions) ===
-          { condition: isVeryFunny && isVeryHappy && isVeryActive, weight: 5, title: "Certified Unhinged Besties", desc: "You two text like you're being charged per minute of silence. Therapists would study this chat." },
+          { condition: isVeryFunny && isVeryHappy && isVeryActive, weight: 5, title: "Certified Unhinged Besties", desc: isGroup ? "This group texts like you're being charged per minute of silence. Therapists would study this chat." : "You two text like you're being charged per minute of silence. Therapists would study this chat." },
           { condition: isVeryActive && isChaotic && isImbalanced && isMoody, weight: 5, title: "The Emotional Rollercoaster", desc: "One of you is screaming into the void and the other is screaming back. It's giving toxic but make it art." },
           { condition: isVeryFunny && isVeryActive && isHappy, weight: 4, title: "Serotonin Dealers", desc: "This chat is a controlled substance. Someone's getting a dopamine hit every 30 seconds." },
           { condition: isVeryHappy && isBalanced && isDuo, weight: 4, title: "Disgustingly Wholesome", desc: "This is the chat people screenshot and post with 'I want what they have.' Nauseating. Beautiful." },
@@ -168,7 +168,7 @@ export const WrappedShareables = ({ data }: WrappedShareablesProps) => {
           { condition: isChaotic && isImbalanced, weight: 3, title: "Main Character vs. Side Character", desc: "One of you is writing a novel in real time. The other sends 'lol' and thinks that's enough." },
           { condition: isChaotic && isBalanced, weight: 3, title: "Mutually Unhinged", desc: "You're both equally chaotic and somehow that's the glue. Two wrongs making a right." },
           { condition: isModerateChaos && isVeryActive, weight: 3, title: "The Notification Nightmare", desc: "Anyone in a meeting with either of you has suffered. Your phone buzzes could power a small city." },
-          { condition: isChaotic && isSerious, weight: 3, title: "Anxious Attachment: The Chat", desc: "All those messages and barely a 'haha' in sight. Are you two okay? Genuinely asking." },
+          { condition: isChaotic && isSerious, weight: 3, title: "Anxious Attachment: The Chat", desc: isGroup ? "All those messages and barely a 'haha' in sight. Is this group okay? Genuinely asking." : "All those messages and barely a 'haha' in sight. Are you two okay? Genuinely asking." },
           { condition: isModerateChaos && isFunny, weight: 2, title: "Controlled Demolition", desc: "Chaotic enough to be fun, structured enough to not lose friends." },
 
           // === IMBALANCE TIER ===

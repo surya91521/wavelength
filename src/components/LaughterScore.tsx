@@ -74,7 +74,7 @@ export const LaughterScore = ({ laughterCounts, participants }: LaughterScorePro
           const ratio = sortedParticipants[0].count / (sortedParticipants[1]?.count || 1);
           if (ratio > 2) return `${sortedParticipants[0].name} is basically the laugh track of this chat. ${sortedParticipants[1]?.name} is the comedian who doesn't laugh at their own jokes.`;
           if (ratio > 1.3) return `${sortedParticipants[0].name} laughs more. Either they're funnier or they're just easier to please.`;
-          return `You both laugh equally. Either you're both hilarious or both extremely generous with 'haha'.`;
+          return `Everyone laughs about equally. Either you're all hilarious or all extremely generous with 'haha'.`;
         })()}
       </p>
     </div>

@@ -8,18 +8,33 @@ interface StreakTrackerProps {
   participants: string[];
 }
 
-export const StreakTracker = ({ data }: StreakTrackerProps) => {
+export const StreakTracker = ({ data, participants }: StreakTrackerProps) => {
   const { longestStreak, currentStreak, streakBrokenOn, totalActiveDays, totalDays } = data;
   const activityPercent = totalDays > 0 ? Math.round((totalActiveDays / totalDays) * 100) : 0;
+  const isGroup = participants.length > 2;
 
   const getStreakVerdict = () => {
-    if (longestStreak.days > 365) return "Over a year of daily texting. That's not a streak, that's a lifestyle.";
-    if (longestStreak.days > 180) return "Half a year straight. Snapchat streaks could never.";
-    if (longestStreak.days > 90) return "Three months without missing a day. That's commitment, not a chat.";
-    if (longestStreak.days > 30) return "A solid month+ streak. You two don't do 'space'.";
-    if (longestStreak.days > 7) return "A week+ of nonstop texting. Respectable.";
-    if (longestStreak.days > 1) return "A brief streak. Life got in the way. It happens.";
-    return "No streak detected. You text when the mood strikes.";
+    if (longestStreak.days > 365) return isGroup
+      ? "Over a year of daily messages. This group never sleeps."
+      : "Over a year of daily texting. That's not a streak, that's a lifestyle.";
+    if (longestStreak.days > 180) return isGroup
+      ? "Half a year straight. This group chat is basically a heartbeat."
+      : "Half a year straight. Snapchat streaks could never.";
+    if (longestStreak.days > 90) return isGroup
+      ? "Three months without a single quiet day. This group doesn't take breaks."
+      : "Three months without missing a day. That's commitment, not a chat.";
+    if (longestStreak.days > 30) return isGroup
+      ? "A solid month+ streak. This group doesn't do 'space'."
+      : "A solid month+ streak. You two don't do 'space'.";
+    if (longestStreak.days > 7) return isGroup
+      ? "A week+ of nonstop group activity. Respectable."
+      : "A week+ of nonstop texting. Respectable.";
+    if (longestStreak.days > 1) return isGroup
+      ? "A brief streak. Someone always goes quiet eventually."
+      : "A brief streak. Life got in the way. It happens.";
+    return isGroup
+      ? "No streak detected. This group texts when the mood strikes."
+      : "No streak detected. You text when the mood strikes.";
   };
 
   const getFireEmojis = () => {

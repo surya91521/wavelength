@@ -33,7 +33,7 @@ export const ConversationKiller = ({ data, participants }: ConversationKillerPro
     }
     if (topKillerPercent > 70) return `${topKiller.name} ends ${topKillerPercent}% of conversations. Their last message enters the chat and the chat enters the morgue.`;
     if (topKillerPercent > 55) return `${topKiller.name} tends to have the last word. Make of that what you will.`;
-    return "You both kill conversations equally. Perfectly balanced, as all things should be.";
+    return "Everyone kills conversations equally. Perfectly balanced, as all things should be.";
   };
 
   const getGradient = (index: number) => {

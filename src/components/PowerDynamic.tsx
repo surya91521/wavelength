@@ -157,7 +157,9 @@ export const PowerDynamic = ({
                 if (ratio > 10) return `${fastest} replies instantly. ${slowest} replies... eventually. The audacity.`;
                 if (ratio > 4) return `${fastest} is clearly more invested in replying fast. ${slowest}, we see you taking your sweet time.`;
                 if (ratio > 2) return `${fastest} replies faster, but ${slowest} isn't far behind. Healthy-ish.`;
-                return `You both reply at about the same speed. Either you're both obsessed or both unbothered.`;
+                return participants.length > 2
+                  ? `Everyone replies at about the same speed. Either you're all obsessed or all unbothered.`
+                  : `You both reply at about the same speed. Either you're both obsessed or both unbothered.`;
              })()}
         </p>
 
